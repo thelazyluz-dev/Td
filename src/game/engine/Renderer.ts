@@ -129,8 +129,7 @@ export class Renderer {
   private bannerTimer = 0;
   private bannerDur   = 0;
 
-  // Resize listener cleanup
-  private _resizeHandler: (() => void) | null = null;
+  private _onResize = () => this.updateViewport();
 
   async init(container: HTMLElement): Promise<void> {
     const resolution = Math.min(window.devicePixelRatio || 1, 2);
@@ -145,13 +144,7 @@ export class Renderer {
     });
 
     container.appendChild(this.app.canvas);
-
-    // Set canvas style to fill container
-    const canvas = this.app.canvas as HTMLCanvasElement;
-    canvas.style.position = 'absolute';
-    canvas.style.inset = '0';
-    canvas.style.width = '100%';
-    canvas.style.height = '100%';
+    (this.app.canvas as HTMLCanvasElement).style.display = 'block';
 
     this.app.stage.addChild(this.gameContainer);
     this.gameContainer.addChild(
@@ -160,16 +153,18 @@ export class Renderer {
     );
 
     this.drawPath();
-    this.updateViewport();
 
-    this._resizeHandler = () => this.updateViewport();
-    window.addEventListener('resize', this._resizeHandler);
+    // Use PixiJS renderer resize event (fires when resizeTo detects size change)
+    this.app.renderer.on('resize', this._onResize);
+    this.updateViewport();
   }
 
   private updateViewport(): void {
     if (!this.app) return;
-    const vw = this.app.renderer.width  / (window.devicePixelRatio || 1);
-    const vh = this.app.renderer.height / (window.devicePixelRatio || 1);
+    // app.screen gives logical CSS pixel dimensions (correct regardless of DPR)
+    const vw = this.app.screen.width;
+    const vh = this.app.screen.height;
+    if (vw <= 0 || vh <= 0) return;
     const scale = Math.min(vw / CANVAS_W, vh / CANVAS_H);
     const offsetX = (vw - CANVAS_W * scale) / 2;
     const offsetY = (vh - CANVAS_H * scale) / 2;
@@ -828,10 +823,7 @@ export class Renderer {
   // ── Cleanup ──────────────────────────────────────────────────────────────
 
   destroy(): void {
-    if (this._resizeHandler) {
-      window.removeEventListener('resize', this._resizeHandler);
-      this._resizeHandler = null;
-    }
+    this.app?.renderer.off('resize', this._onResize);
     this.app?.destroy(true);
     this.app = null;
     this.enemySprites.clear();
