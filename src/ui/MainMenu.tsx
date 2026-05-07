@@ -70,21 +70,19 @@ export function MainMenu() {
         background: 'radial-gradient(ellipse at 30% 40%, rgba(120,0,0,0.18) 0%, transparent 55%), radial-gradient(ellipse at 70% 60%, rgba(0,30,0,0.1) 0%, transparent 55%)',
       }} />
 
-      <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 28, textAlign: 'center', padding: '0 32px' }}>
+      <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'clamp(10px, 2.5vh, 24px)', textAlign: 'center', padding: '0 24px' }}>
 
         {/* Title */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-          <p style={{ margin: 0, color: '#dc2626', fontWeight: 700, fontSize: 11, letterSpacing: '0.4em', textTransform: 'uppercase' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
+          <p style={{ margin: '0 0 4px', color: '#dc2626', fontWeight: 700, fontSize: 10, letterSpacing: '0.4em', textTransform: 'uppercase' }}>
             Tower Defense · Roguelike
           </p>
-          <h1 style={{ margin: 0, color: '#fff', fontWeight: 900, fontSize: 'clamp(46px, 11vw, 78px)', lineHeight: 1, letterSpacing: '-0.04em', textShadow: '0 0 60px rgba(220,38,38,0.55), 0 2px 4px rgba(0,0,0,0.8)' }}>
-            LAST
-          </h1>
-          <h1 style={{ margin: '-10px 0 0', color: '#ef4444', fontWeight: 900, fontSize: 'clamp(46px, 11vw, 78px)', lineHeight: 1, letterSpacing: '-0.04em', textShadow: '0 0 70px rgba(220,38,38,0.75), 0 2px 4px rgba(0,0,0,0.8)' }}>
-            STAND
-          </h1>
-          <p style={{ margin: '6px 0 0', color: 'rgba(255,255,255,0.28)', fontSize: 13, lineHeight: 1.7, maxWidth: 260 }}>
-            Survive 10 waves of the undead.<br />Build towers. Hold the line.
+          <div style={{ lineHeight: 0.92, letterSpacing: '-0.04em' }}>
+            <span style={{ display: 'block', color: '#fff', fontWeight: 900, fontSize: 'clamp(32px, 8vw, 64px)', textShadow: '0 0 60px rgba(220,38,38,0.55), 0 2px 4px rgba(0,0,0,0.8)' }}>LAST</span>
+            <span style={{ display: 'block', color: '#ef4444', fontWeight: 900, fontSize: 'clamp(32px, 8vw, 64px)', textShadow: '0 0 70px rgba(220,38,38,0.75), 0 2px 4px rgba(0,0,0,0.8)' }}>STAND</span>
+          </div>
+          <p style={{ margin: '6px 0 0', color: 'rgba(255,255,255,0.28)', fontSize: 12, lineHeight: 1.5, maxWidth: 240 }}>
+            Survive 10 waves. Build towers. Hold the line.
           </p>
         </div>
 
@@ -93,8 +91,8 @@ export function MainMenu() {
           onPointerDown={() => initEngine()}
           style={{
             background: '#b91c1c', color: '#fff', border: '1px solid rgba(255,255,255,0.12)',
-            fontWeight: 900, fontSize: 18, letterSpacing: '0.1em',
-            padding: '15px 52px', minHeight: 54, borderRadius: 14,
+            fontWeight: 900, fontSize: 17, letterSpacing: '0.1em',
+            padding: 'clamp(10px,2vh,15px) 48px', minHeight: 48, borderRadius: 14,
             boxShadow: '0 8px 32px rgba(180,0,0,0.45)',
             cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
           }}
@@ -102,21 +100,20 @@ export function MainMenu() {
           START RUN
         </button>
 
-        {/* Tips */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, maxWidth: 400 }}>
+        {/* Tips — hidden on very short screens */}
+        <div style={{ display: 'flex', gap: 8, maxWidth: 360 }}>
           {[
-            { icon: '🔫', label: 'Place Towers', desc: '10s build phase' },
-            { icon: '🌊', label: '10 Waves',     desc: 'Boss at 5 & 10' },
-            { icon: '💀', label: 'Hold the Line', desc: '10 through = over' },
-          ].map(({ icon, label, desc }) => (
+            { icon: '🔫', label: 'Place Towers' },
+            { icon: '🌊', label: '10 Waves' },
+            { icon: '💀', label: 'Hold the Line' },
+          ].map(({ icon, label }) => (
             <div key={label} style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
-              padding: '10px 8px', borderRadius: 12,
+              flex: 1, display: 'flex', alignItems: 'center', gap: 5,
+              padding: '6px 8px', borderRadius: 10,
               background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
             }}>
-              <span style={{ fontSize: 22 }}>{icon}</span>
-              <span style={{ color: '#f3f4f6', fontSize: 11, fontWeight: 600 }}>{label}</span>
-              <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10 }}>{desc}</span>
+              <span style={{ fontSize: 16 }}>{icon}</span>
+              <span style={{ color: '#f3f4f6', fontSize: 10, fontWeight: 600 }}>{label}</span>
             </div>
           ))}
         </div>

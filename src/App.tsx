@@ -25,10 +25,10 @@ export default function App() {
   if (!state) return <MainMenu />;
 
   return (
-    <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', background: '#000' }}>
-      <GameCanvas />
-      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 10 }}>
-        <HUD />
+    <div style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#0a2a06' }}>
+      <HUD />
+      <div style={{ flex: 1, position: 'relative', overflow: 'hidden', minHeight: 0 }}>
+        <GameCanvas />
         <GameOver />
       </div>
     </div>

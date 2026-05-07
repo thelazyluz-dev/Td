@@ -12,17 +12,6 @@ const TOWER_ICONS: Record<string, string> = {
   Watchtower:  '👁',
 };
 
-const TOWER_DESC: Record<string, string> = {
-  Rifleman:    '15dps 150r',
-  Shotgunner:  '25dps 90r',
-  Sniper:      '45dps 300r',
-  MachineGun:  '30dps 130r',
-  Flamethrower:'8dps DoT',
-  Mortar:      '60dps AoE',
-  BarbedWire:  'slow',
-  Watchtower:  '+range',
-};
-
 // Tower accent colors (CSS hex strings matching TC in Renderer)
 const TOWER_COLORS: Record<string, string> = {
   Rifleman:    '#44aaff',
@@ -56,119 +45,66 @@ export function HUD() {
   return (
     <>
       <div
-        className="absolute inset-x-0 top-0 flex flex-col pointer-events-none select-none"
-        style={{ WebkitUserSelect: 'none' }}
+        className="flex flex-col pointer-events-none select-none"
+        style={{ WebkitUserSelect: 'none', flexShrink: 0 }}
       >
         {/* ── Top bar ── */}
         <div
-          className="flex items-center justify-between px-3 py-2 pointer-events-auto"
+          className="flex items-center justify-between px-3 pointer-events-auto"
           style={{
-            background: 'rgba(0,20,0,0.82)',
-            borderBottom: '2px solid rgba(80,200,80,0.2)',
+            background: 'rgba(0,20,0,0.92)',
+            borderBottom: '1px solid rgba(80,200,80,0.2)',
             backdropFilter: 'blur(6px)',
+            minHeight: 38,
           }}
         >
           {/* Stats */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1.5">
-              <span style={{ color: hpColor, fontSize: 18, lineHeight: 1 }}>♥</span>
-              <span style={{ color: hpColor, fontFamily: 'monospace', fontWeight: 700, fontSize: 15 }}>
-                {state.baseHp}
-                <span style={{ color: 'rgba(255,100,100,0.4)', fontSize: 12 }}>/{state.baseMaxHp}</span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1">
+              <span style={{ color: hpColor, fontSize: 14, lineHeight: 1 }}>♥</span>
+              <span style={{ color: hpColor, fontFamily: 'monospace', fontWeight: 700, fontSize: 13 }}>
+                {state.baseHp}<span style={{ color: 'rgba(255,100,100,0.4)', fontSize: 11 }}>/{state.baseMaxHp}</span>
               </span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <span style={{ color: '#ffd700', fontSize: 15 }}>$</span>
-              <span style={{ color: '#ffe066', fontFamily: 'monospace', fontWeight: 700, fontSize: 15 }}>{state.gold}</span>
+            <div className="flex items-center gap-1">
+              <span style={{ color: '#ffd700', fontSize: 13 }}>$</span>
+              <span style={{ color: '#ffe066', fontFamily: 'monospace', fontWeight: 700, fontSize: 13 }}>{state.gold}</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <span style={{ color: '#66aaff', fontWeight: 700, fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Wave</span>
-              <span style={{ color: '#88ccff', fontFamily: 'monospace', fontWeight: 700, fontSize: 15 }}>
-                {state.wave}
-                <span style={{ color: 'rgba(100,160,255,0.4)', fontSize: 12 }}>/10</span>
+            <div className="flex items-center gap-1">
+              <span style={{ color: '#66aaff', fontWeight: 700, fontSize: 9, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Wave</span>
+              <span style={{ color: '#88ccff', fontFamily: 'monospace', fontWeight: 700, fontSize: 13 }}>
+                {state.wave}<span style={{ color: 'rgba(100,160,255,0.4)', fontSize: 11 }}>/10</span>
               </span>
             </div>
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             {inBuild && (
-              <span className="flex items-center gap-1" style={{ color: '#44ee88', fontWeight: 600, fontSize: 11 }}>
-                <span style={{
-                  display: 'inline-block',
-                  width: 6, height: 6,
-                  borderRadius: '50%',
-                  background: '#44ee88',
-                  animation: 'pulse 1s infinite',
-                }} />
+              <span className="flex items-center gap-1" style={{ color: '#44ee88', fontWeight: 600, fontSize: 10 }}>
+                <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: '#44ee88' }} />
                 Build {Math.ceil(state.buildTimeLeft)}s
               </span>
             )}
             {inWave && (
-              <span className="flex items-center gap-1" style={{ color: '#ff9944', fontWeight: 600, fontSize: 11 }}>
-                <span style={{
-                  display: 'inline-block',
-                  width: 6, height: 6,
-                  borderRadius: '50%',
-                  background: '#ff9944',
-                  animation: 'ping 1s infinite',
-                }} />
+              <span className="flex items-center gap-1" style={{ color: '#ff9944', fontWeight: 600, fontSize: 10 }}>
+                <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: '#ff9944' }} />
                 Active
               </span>
             )}
-
             {inBuild && (
-              <button
-                onPointerDown={() => skipBuild()}
-                style={{
-                  background: 'rgba(60,180,80,0.2)',
-                  border: '1px solid rgba(80,220,80,0.3)',
-                  color: '#88ee88',
-                  borderRadius: 6,
-                  fontSize: 11,
-                  padding: '4px 10px',
-                  minHeight: 32,
-                  cursor: 'pointer',
-                  WebkitTapHighlightColor: 'transparent',
-                }}
-              >
+              <button onPointerDown={() => skipBuild()} style={{ background: 'rgba(60,180,80,0.2)', border: '1px solid rgba(80,220,80,0.3)', color: '#88ee88', borderRadius: 5, fontSize: 10, padding: '3px 8px', minHeight: 26, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}>
                 Skip →
               </button>
             )}
             {state.airStrikeCharges > 0 && (
-              <button
-                onPointerDown={airStrike}
-                style={{
-                  background: 'rgba(180,40,20,0.7)',
-                  border: '1px solid #cc4422',
-                  color: '#ffaaaa',
-                  borderRadius: 6,
-                  fontSize: 11,
-                  padding: '4px 10px',
-                  minHeight: 32,
-                  cursor: 'pointer',
-                  WebkitTapHighlightColor: 'transparent',
-                }}
-              >
-                ✈ Strike ({state.airStrikeCharges})
+              <button onPointerDown={airStrike} style={{ background: 'rgba(180,40,20,0.7)', border: '1px solid #cc4422', color: '#ffaaaa', borderRadius: 5, fontSize: 10, padding: '3px 8px', minHeight: 26, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}>
+                ✈({state.airStrikeCharges})
               </button>
             )}
             {state.empCharges > 0 && (
-              <button
-                onPointerDown={empBlast}
-                style={{
-                  background: 'rgba(20,60,200,0.7)',
-                  border: '1px solid #4466cc',
-                  color: '#aabbff',
-                  borderRadius: 6,
-                  fontSize: 11,
-                  padding: '4px 10px',
-                  minHeight: 32,
-                  cursor: 'pointer',
-                  WebkitTapHighlightColor: 'transparent',
-                }}
-              >
-                ⚡ EMP ({state.empCharges})
+              <button onPointerDown={empBlast} style={{ background: 'rgba(20,60,200,0.7)', border: '1px solid #4466cc', color: '#aabbff', borderRadius: 5, fontSize: 10, padding: '3px 8px', minHeight: 26, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}>
+                ⚡({state.empCharges})
               </button>
             )}
           </div>
@@ -177,10 +113,10 @@ export function HUD() {
         {/* ── Tower shop ── */}
         {inBuild && (
           <div
-            className="flex gap-1.5 px-2 py-1.5 overflow-x-auto pointer-events-auto"
+            className="flex gap-1 px-1.5 py-1 overflow-x-auto pointer-events-auto"
             style={{
-              background: 'rgba(0,15,0,0.80)',
-              borderBottom: '2px solid rgba(80,200,80,0.15)',
+              background: 'rgba(0,15,0,0.88)',
+              borderBottom: '1px solid rgba(80,200,80,0.15)',
               backdropFilter: 'blur(4px)',
               WebkitOverflowScrolling: 'touch',
               scrollbarWidth: 'none',
@@ -197,10 +133,10 @@ export function HUD() {
                   onPointerDown={() => selectTower(sel ? null : def.type)}
                   style={{
                     flexShrink: 0,
-                    minWidth: 66,
-                    minHeight: 60,
-                    padding: '4px 8px',
-                    borderRadius: 8,
+                    minWidth: 58,
+                    minHeight: 48,
+                    padding: '3px 6px',
+                    borderRadius: 7,
                     border: `1px solid ${sel ? '#ffd700' : 'rgba(255,255,255,0.12)'}`,
                     borderLeft: `3px solid ${accentColor}`,
                     background: sel
@@ -219,10 +155,9 @@ export function HUD() {
                     transition: 'box-shadow 0.15s',
                   }}
                 >
-                  <span style={{ fontSize: 18, lineHeight: 1 }}>{TOWER_ICONS[def.type] ?? '🗼'}</span>
-                  <span style={{ color: '#e5e7eb', fontSize: 10, fontWeight: 700, lineHeight: 1.2 }}>{def.type}</span>
-                  <span style={{ color: canAfford ? '#ffd700' : '#888', fontSize: 10, lineHeight: 1, fontWeight: 700 }}>${def.cost}</span>
-                  <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 8, lineHeight: 1 }}>{TOWER_DESC[def.type]}</span>
+                  <span style={{ fontSize: 15, lineHeight: 1 }}>{TOWER_ICONS[def.type] ?? '🗼'}</span>
+                  <span style={{ color: '#e5e7eb', fontSize: 9, fontWeight: 700, lineHeight: 1.2 }}>{def.type}</span>
+                  <span style={{ color: canAfford ? '#ffd700' : '#888', fontSize: 9, lineHeight: 1, fontWeight: 700 }}>${def.cost}</span>
                 </button>
               );
             })}
