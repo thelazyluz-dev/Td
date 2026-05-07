@@ -24,12 +24,12 @@ export function GameOver() {
         {/* Title */}
         <div className="text-center">
           <h1 className={`text-5xl font-black tracking-tight ${isWin ? 'text-emerald-300' : 'text-red-400'}`}>
-            {isWin ? 'SURVIVED' : 'OVERRUN'}
+            {isWin ? '🏠 הבית ניצל!' : '🐜 נכשלת!'}
           </h1>
           <p className="text-white/50 mt-2 text-sm">
             {isWin
-              ? 'All 10 waves defeated. The last stand holds.'
-              : `The horde broke through on wave ${state.wave}.`}
+              ? 'כל 10 גלי הנמלים נעצרו. הבית בטוח!'
+              : `הנמלים פרצו לבית בגל ${state.wave}.`}
           </p>
         </div>
 
@@ -63,7 +63,7 @@ export function GameOver() {
               }
             `}
           >
-            Play Again
+            שחק שוב
           </button>
           <button
             onClick={resetGame}

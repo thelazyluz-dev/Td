@@ -10,8 +10,8 @@ function PortraitWarning() {
     <div style={{ position: 'fixed', inset: 0, background: '#050505', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20, zIndex: 999 }}>
       <div style={{ fontSize: 56 }} className="animate-bounce">📱</div>
       <div style={{ textAlign: 'center', padding: '0 32px' }}>
-        <p style={{ color: '#fff', fontWeight: 700, fontSize: 18, margin: 0 }}>Rotate your device</p>
-        <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13, margin: '6px 0 0' }}>Last Stand requires landscape mode</p>
+        <p style={{ color: '#fff', fontWeight: 700, fontSize: 18, margin: 0 }}>סובב את המכשיר</p>
+        <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13, margin: '6px 0 0' }}>Bug Off! עובד רק במצב אופקי</p>
       </div>
     </div>
   );
