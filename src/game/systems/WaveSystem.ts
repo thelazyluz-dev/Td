@@ -1,6 +1,6 @@
 import { Enemy } from '../entities/Enemy';
 import { ENEMY_DEFS } from '../data/enemies';
-import { WAVE_DEFS } from '../data/waves';
+import { WAVE_DEFS, generateWave } from '../data/waves';
 import { BALANCE } from '../balance';
 
 interface SpawnEntry {
@@ -24,7 +24,7 @@ export class WaveSystem {
 
   startWave(waveIndex: number) {
     this.waveIndex = waveIndex;
-    const def = WAVE_DEFS[waveIndex];
+    const def = waveIndex < WAVE_DEFS.length ? WAVE_DEFS[waveIndex] : generateWave(waveIndex);
     this.spawnQueue = def.entries.map((e) => ({
       ...e,
       remaining: e.count,

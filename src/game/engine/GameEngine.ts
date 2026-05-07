@@ -5,7 +5,6 @@ import { WaveSystem } from '../systems/WaveSystem';
 import { CombatSystem, DEFAULT_COMBAT_UPGRADES, type CombatUpgrades } from '../systems/CombatSystem';
 import { EconomySystem } from '../systems/EconomySystem';
 import { TOWER_DEFS } from '../data/towers';
-import { WAVE_DEFS } from '../data/waves';
 import { BALANCE } from '../balance';
 import type { GamePhase, Vec2 } from '../entities/types';
 
@@ -74,9 +73,7 @@ export class GameEngine {
   }
 
   getState(): GameState {
-    const canSend = this.phase === 'wave'
-      && !this.earlyWaveSentThisRound
-      && this.committedWaveIdx < WAVE_DEFS.length - 1;
+    const canSend = this.phase === 'wave' && !this.earlyWaveSentThisRound;
     return {
       phase: this.phase,
       wave: this.committedWaveIdx + 1,
@@ -193,13 +190,9 @@ export class GameEngine {
   }
 
   private endWave() {
-    if (this.committedWaveIdx >= WAVE_DEFS.length - 1) {
-      this.phase = 'win';
-    } else {
-      this.committedWaveIdx++;
-      this.buildTimer = BALANCE.BUILD_PHASE_DURATION;
-      this.phase = 'build';
-    }
+    this.committedWaveIdx++;
+    this.buildTimer = BALANCE.BUILD_PHASE_DURATION;
+    this.phase = 'build';
   }
 
   // --- Player actions ---
@@ -246,7 +239,6 @@ export class GameEngine {
   sendNextWave() {
     if (this.phase !== 'wave') return;
     if (this.earlyWaveSentThisRound) return;
-    if (this.committedWaveIdx >= WAVE_DEFS.length - 1) return;
     this.earlyWaveSentThisRound = true;
     this.committedWaveIdx++;
     this.economySystem.earn(EARLY_WAVE_BONUS, this.goldMult);
