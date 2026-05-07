@@ -19,6 +19,7 @@ export interface TowerDef {
 
 export interface WaveDef {
   entries: Array<{ enemyType: string; count: number; interval: number }>;
+  modifier?: 'speed' | 'armor';
 }
 
 export interface Vec2 {

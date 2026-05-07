@@ -46,6 +46,11 @@ export function GameCanvas() {
     rendererRef.current?.setSelectedTower(selectedUpgradeTowerId ?? null);
   }, [selectedUpgradeTowerId]);
 
+  const pathVariant = state?.pathVariant ?? 0;
+  useEffect(() => {
+    rendererRef.current?.redrawPath();
+  }, [pathVariant]);
+
   useEffect(() => {
     rendererRef.current?.setPlacementMode(selectedTower !== null);
   }, [selectedTower]);

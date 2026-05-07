@@ -481,6 +481,11 @@ export class Renderer {
     this.pathLayer.addChild(g);
   }
 
+  redrawPath(): void {
+    this.pathLayer.removeChildren();
+    this.drawPath();
+  }
+
   // ── Public update (called from GameCanvas RAF loop) ────────────────────
 
   update(state: GameState, dt: number): void {

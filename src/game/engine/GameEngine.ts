@@ -7,6 +7,8 @@ import { EconomySystem } from '../systems/EconomySystem';
 import { TOWER_DEFS } from '../data/towers';
 import { BALANCE } from '../balance';
 import type { GamePhase, Vec2 } from '../entities/types';
+import type { SavedTower } from '../../utils/buildSave';
+import { setActivePath, PATH_VARIANTS } from './PathManager';
 
 export interface GameState {
   phase: GamePhase;
@@ -27,6 +29,10 @@ export interface GameState {
   speed: number;
   lastPerfectBonus: number;
   isPaused: boolean;
+  lastWaveKills: number;
+  lastWaveEscaped: number;
+  waveModifier: 'speed' | 'armor' | null;
+  pathVariant: number;
 }
 
 type StateListener = (state: GameState) => void;
@@ -55,6 +61,12 @@ export class GameEngine {
   private lastPerfectBonus = 0;
   private isPaused = false;
   private regenHPPerThirty = 0;
+  private waveKillsCount = 0;
+  private waveEscapedCount = 0;
+  private lastWaveKills = 0;
+  private lastWaveEscaped = 0;
+  private currentWaveModifier: 'speed' | 'armor' | null = null;
+  private pathVariantIdx = 0;
   private lastTs: number | null = null;
   private rafId: number | null = null;
   private listeners: StateListener[] = [];
@@ -96,10 +108,16 @@ export class GameEngine {
       speed: this.speedMult,
       lastPerfectBonus: this.lastPerfectBonus,
       isPaused: this.isPaused,
+      lastWaveKills: this.lastWaveKills,
+      lastWaveEscaped: this.lastWaveEscaped,
+      waveModifier: this.currentWaveModifier,
+      pathVariant: this.pathVariantIdx,
     };
   }
 
   start() {
+    this.pathVariantIdx = Math.floor(Math.random() * PATH_VARIANTS.length);
+    setActivePath(this.pathVariantIdx);
     this.phase = 'build';
     this.buildTimer = BALANCE.BUILD_PHASE_DURATION;
     this.emit();
@@ -135,6 +153,13 @@ export class GameEngine {
     return 50 + this.committedWaveIdx * 15;
   }
 
+  private waveModifierFor(idx: number): 'speed' | 'armor' | null {
+    if (idx < 2) return null;
+    if (idx % 5 === 2) return 'speed';
+    if (idx % 5 === 4) return 'armor';
+    return null;
+  }
+
   setSpeed(mult: number) { this.speedMult = mult; this.emit(); }
 
   pause(): void {
@@ -156,8 +181,12 @@ export class GameEngine {
     if (this.isPaused) this.resume(); else this.pause();
   }
 
-  private tickBuild(_dt: number) {
-    // Build phase: player presses Ready to start
+  private tickBuild(dt: number) {
+    this.buildTimer -= dt;
+    if (this.buildTimer <= 0) {
+      this.buildTimer = 0;
+      this.beginWave();
+    }
   }
 
   private beginWave() {
@@ -165,8 +194,11 @@ export class GameEngine {
     this.earlyWaveSentThisRound = false;
     this.baseDamagedThisWave = false;
     this.lastPerfectBonus = 0;
+    this.waveKillsCount = 0;
+    this.waveEscapedCount = 0;
+    this.currentWaveModifier = this.waveModifierFor(this.committedWaveIdx);
     const ws = new WaveSystem();
-    ws.startWave(this.committedWaveIdx);
+    ws.startWave(this.committedWaveIdx, this.currentWaveModifier);
     this.waveSystems = [ws];
   }
 
@@ -212,6 +244,7 @@ export class GameEngine {
     );
 
     this.economySystem.update(dt);
+    this.waveKillsCount += this.enemies.filter(e => e.isDead && !e.reachedEnd).length;
     this.enemies = this.enemies.filter((e) => !e.isDead || e.reachedEnd);
 
     // All wave systems done + all enemies cleared = wave over
@@ -228,6 +261,8 @@ export class GameEngine {
     } else {
       this.lastPerfectBonus = 0;
     }
+    this.lastWaveKills = this.waveKillsCount;
+    this.lastWaveEscaped = this.enemies.filter(e => e.reachedEnd).length;
     this.committedWaveIdx++;
     this.buildTimer = BALANCE.BUILD_PHASE_DURATION;
     this.phase = 'build';
@@ -247,6 +282,7 @@ export class GameEngine {
   upgradeTower(towerId: number): boolean {
     const tower = this.towers.find(t => t.id === towerId);
     if (!tower) return false;
+    if (tower.upgrades === 0 && tower.branch === null) return false; // must pick branch first
     const cost = tower.upgradeCost;
     if (!this.economySystem.spend(cost)) return false;
     tower.totalSpent += cost;
@@ -254,6 +290,27 @@ export class GameEngine {
     tower.damageMultiplier   = 1 + tower.upgrades * 0.5;
     tower.rangeMultiplier    = 1 + tower.upgrades * 0.1;
     tower.fireRateMultiplier = 1 + tower.upgrades * 0.2;
+    this.emit();
+    return true;
+  }
+
+  upgradeTowerBranch(towerId: number, branch: 'dmg' | 'util'): boolean {
+    const tower = this.towers.find(t => t.id === towerId);
+    if (!tower || tower.upgrades !== 0 || tower.branch !== null) return false;
+    const cost = tower.upgradeCost;
+    if (!this.economySystem.spend(cost)) return false;
+    tower.branch = branch;
+    tower.totalSpent += cost;
+    tower.upgrades = 1;
+    if (branch === 'dmg') {
+      tower.damageMultiplier   = 2.5;
+      tower.fireRateMultiplier = 1.2;
+      tower.rangeMultiplier    = 1.1;
+    } else {
+      tower.damageMultiplier   = 1.3;
+      tower.fireRateMultiplier = 1.7;
+      tower.rangeMultiplier    = 1.6;
+    }
     this.emit();
     return true;
   }
@@ -282,7 +339,7 @@ export class GameEngine {
     this.committedWaveIdx++;
     this.economySystem.earn(earlyBonus, this.goldMult);
     const ws = new WaveSystem();
-    ws.startWave(this.committedWaveIdx);
+    ws.startWave(this.committedWaveIdx, this.waveModifierFor(this.committedWaveIdx));
     this.waveSystems.push(ws);
     this.emit();
   }
@@ -292,6 +349,7 @@ export class GameEngine {
     this.airStrikeCharges--;
     for (const e of this.enemies) if (!e.isDead && !e.reachedEnd) {
       e.isDead = true;
+      this.waveKillsCount++;
       this.economySystem.earn(e.goldReward, this.goldMult);
     }
     this.emit();
@@ -305,6 +363,19 @@ export class GameEngine {
       for (const e of this.enemies) e.isFrozen = false;
       this.emit();
     }, 3000);
+    this.emit();
+  }
+
+  loadBuild(savedTowers: SavedTower[], tileSize: number) {
+    if (this.phase !== 'build') return;
+    for (const st of savedTowers) {
+      const def = TOWER_DEFS[st.type];
+      if (!def) continue;
+      const pos: Vec2 = { x: st.col * tileSize + tileSize / 2, y: st.row * tileSize + tileSize / 2 };
+      if (this.economySystem.spend(def.cost)) {
+        this.towers.push(new Tower(def, pos));
+      }
+    }
     this.emit();
   }
 

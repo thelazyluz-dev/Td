@@ -25,6 +25,7 @@ export class Tower {
   upgrades: number = 0;
   kills: number = 0;
   totalSpent: number; // base cost + all upgrade costs paid (for sell refund)
+  branch: 'dmg' | 'util' | null = null; // chosen at first upgrade
 
   constructor(def: TowerDef, pos: Vec2) {
     this.id = _nextTowerId++;

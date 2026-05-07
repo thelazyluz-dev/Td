@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { GameEngine, type GameState } from '../game/engine/GameEngine';
 import { BALANCE } from '../game/balance';
 import type { Vec2 } from '../game/entities/types';
+import { saveBuild, loadSavedBuild, hasSavedBuild } from '../utils/buildSave';
 
 interface GameStore {
   engine: GameEngine | null;
@@ -18,9 +19,13 @@ interface GameStore {
   resetGame: () => void;
   selectForUpgrade: (id: number | null) => void;
   upgradeTower: (id: number) => void;
+  upgradeTowerBranch: (id: number, branch: 'dmg' | 'util') => void;
   sellTower: (id: number) => void;
   setSpeed: (mult: number) => void;
   togglePause: () => void;
+  saveBuild: () => void;
+  loadBuild: () => void;
+  hasSavedBuild: () => boolean;
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -86,6 +91,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
     engine.upgradeTower(id);
   },
 
+  upgradeTowerBranch(id, branch) {
+    const { engine } = get();
+    if (!engine) return;
+    engine.upgradeTowerBranch(id, branch);
+  },
+
   sellTower(id) {
     const { engine } = get();
     if (!engine) return;
@@ -99,5 +110,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   togglePause() {
     get().engine?.togglePause();
+  },
+
+  saveBuild() {
+    const { state } = get();
+    if (!state) return;
+    saveBuild(state.towers, BALANCE.TILE_SIZE);
+  },
+
+  loadBuild() {
+    const { engine } = get();
+    const saved = loadSavedBuild();
+    if (!engine || !saved) return;
+    engine.loadBuild(saved, BALANCE.TILE_SIZE);
+  },
+
+  hasSavedBuild() {
+    return hasSavedBuild();
   },
 }));

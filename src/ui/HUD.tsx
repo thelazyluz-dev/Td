@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { TOWER_DEFS } from '../game/data/towers';
+import { useSoundEffects } from '../utils/useSoundEffects';
 
 const TOWER_ICONS: Record<string, string> = {
   BugSpray:   '🪲',
@@ -93,8 +94,12 @@ export function HUD() {
   const {
     state, selectedTower, selectedUpgradeTowerId,
     selectTower, skipBuild, sendNextWave, airStrike, empBlast,
-    selectForUpgrade, upgradeTower, sellTower, setSpeed, initEngine, togglePause,
+    selectForUpgrade, upgradeTower, upgradeTowerBranch, sellTower,
+    setSpeed, initEngine, togglePause,
+    saveBuild, loadBuild, hasSavedBuild,
   } = useGameStore();
+
+  useSoundEffects(state ?? null);
 
   const [confirmRestart, setConfirmRestart] = useState(false);
   const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -188,7 +193,22 @@ export function HUD() {
               <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 11 }}>
                 <span style={{ color: '#66aaff', fontSize: 9 }}>גל</span>
                 <span style={{ color: '#88ccff' }}>{state.wave}</span>
+                {state.waveModifier === 'speed' && (
+                  <span style={{ color: '#ffcc00', fontSize: 8, marginRight: 2 }} title="גל מהיר"> ⚡</span>
+                )}
+                {state.waveModifier === 'armor' && (
+                  <span style={{ color: '#aaddff', fontSize: 8, marginRight: 2 }} title="גל שריון"> 🛡</span>
+                )}
               </span>
+              {inBuild && state.buildTimeLeft > 0 && (
+                <span style={{
+                  fontFamily: 'monospace', fontWeight: 800, fontSize: 12,
+                  color: state.buildTimeLeft <= 3 ? '#ff4444' : '#aaffaa',
+                  minWidth: 20,
+                }}>
+                  {Math.ceil(state.buildTimeLeft)}s
+                </span>
+              )}
             </div>
           </div>
 
@@ -251,17 +271,39 @@ export function HUD() {
             borderLeft: '1px solid rgba(80,200,80,0.1)',
           }}>
             {inBuild && (
-              <button
-                onPointerDown={() => skipBuild()}
-                style={{
-                  background: '#16a34a', border: '1px solid #22c55e', color: '#fff',
-                  borderRadius: 6, fontSize: 11, fontWeight: 700, padding: '0 9px',
-                  height: 36, cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
-                  boxShadow: '0 0 8px rgba(34,197,94,0.5)', whiteSpace: 'nowrap',
-                }}
-              >
-                ▶ מוכן!
-              </button>
+              <>
+                <button
+                  onPointerDown={() => saveBuild()}
+                  title="שמור מגדלים"
+                  style={{
+                    background: 'rgba(60,60,120,0.7)', border: '1px solid rgba(100,100,220,0.4)',
+                    color: 'rgba(180,180,255,0.8)', borderRadius: 6, fontSize: 13, fontWeight: 700,
+                    width: 32, height: 32, cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
+                  }}
+                >💾</button>
+                {hasSavedBuild() && (
+                  <button
+                    onPointerDown={() => loadBuild()}
+                    title="טען שמירה"
+                    style={{
+                      background: 'rgba(60,120,60,0.7)', border: '1px solid rgba(100,220,100,0.4)',
+                      color: 'rgba(180,255,180,0.8)', borderRadius: 6, fontSize: 13, fontWeight: 700,
+                      width: 32, height: 32, cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
+                    }}
+                  >📂</button>
+                )}
+                <button
+                  onPointerDown={() => skipBuild()}
+                  style={{
+                    background: '#16a34a', border: '1px solid #22c55e', color: '#fff',
+                    borderRadius: 6, fontSize: 11, fontWeight: 700, padding: '0 9px',
+                    height: 36, cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
+                    boxShadow: '0 0 8px rgba(34,197,94,0.5)', whiteSpace: 'nowrap',
+                  }}
+                >
+                  ▶ מוכן!
+                </button>
+              </>
             )}
             {inWave && (
               <button
@@ -344,6 +386,29 @@ export function HUD() {
           </div>
         </div>
       </div>
+
+      {/* Wave summary strip (shown in build phase after wave 1) */}
+      {inBuild && state.wave > 1 && (state.lastWaveKills > 0 || state.lastWaveEscaped > 0) && (
+        <div
+          className="pointer-events-none"
+          style={{
+            background: 'rgba(0,15,0,0.85)',
+            borderBottom: '1px solid rgba(80,200,80,0.1)',
+            padding: '3px 10px',
+            display: 'flex', gap: 12, alignItems: 'center',
+            fontSize: 10, fontFamily: 'monospace',
+          }}
+        >
+          <span style={{ color: 'rgba(255,255,255,0.35)' }}>גל {state.wave - 1}:</span>
+          <span style={{ color: '#66ee66' }}>☠ {state.lastWaveKills} נהרגו</span>
+          {state.lastWaveEscaped > 0 && (
+            <span style={{ color: '#ff8888' }}>⚠ {state.lastWaveEscaped} נמלטו</span>
+          )}
+          {state.lastWaveEscaped === 0 && (
+            <span style={{ color: '#ffd700', fontSize: 9 }}>✨ מושלם</span>
+          )}
+        </div>
+      )}
 
       {/* Perfect wave bonus toast */}
       {perfectToast > 0 && (
@@ -482,9 +547,77 @@ export function HUD() {
             </div>
 
             {/* Action buttons */}
-            <div style={{ display: 'flex', gap: 8 }}>
-              {/* Upgrade button */}
-              <button
+            {/* Branch selection: first upgrade, no branch chosen yet */}
+            {lvl === 0 && (upgradeTowerData as any).branch === null ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={{ color: 'rgba(255,220,100,0.85)', fontSize: 10, fontWeight: 700, textAlign: 'center', marginBottom: 2 }}>
+                  🌿 בחר ענף שדרוג — ${upgCost}
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button
+                    disabled={!canUpg}
+                    onPointerDown={() => { if (canUpg) upgradeTowerBranch(upgradeTowerData.id, 'dmg'); }}
+                    style={{
+                      flex: 1, padding: '10px 4px', borderRadius: 10,
+                      border: `2px solid ${canUpg ? '#ff6644' : 'rgba(255,255,255,0.08)'}`,
+                      background: canUpg ? 'rgba(180,60,30,0.5)' : 'rgba(255,255,255,0.03)',
+                      color: canUpg ? '#ffaa88' : 'rgba(255,255,255,0.2)',
+                      fontSize: 11, fontWeight: 800, cursor: canUpg ? 'pointer' : 'not-allowed',
+                      WebkitTapHighlightColor: 'transparent',
+                      lineHeight: 1.4, textAlign: 'center',
+                    }}
+                  >
+                    ⚔ מַשְׁמִיד<br/>
+                    <span style={{ fontSize: 9, fontWeight: 600, opacity: 0.8 }}>נזק ×2.5</span>
+                  </button>
+                  <button
+                    disabled={!canUpg}
+                    onPointerDown={() => { if (canUpg) upgradeTowerBranch(upgradeTowerData.id, 'util'); }}
+                    style={{
+                      flex: 1, padding: '10px 4px', borderRadius: 10,
+                      border: `2px solid ${canUpg ? '#44aaff' : 'rgba(255,255,255,0.08)'}`,
+                      background: canUpg ? 'rgba(30,80,180,0.5)' : 'rgba(255,255,255,0.03)',
+                      color: canUpg ? '#88ccff' : 'rgba(255,255,255,0.2)',
+                      fontSize: 11, fontWeight: 800, cursor: canUpg ? 'pointer' : 'not-allowed',
+                      WebkitTapHighlightColor: 'transparent',
+                      lineHeight: 1.4, textAlign: 'center',
+                    }}
+                  >
+                    🛡 שׁוֹמֵר<br/>
+                    <span style={{ fontSize: 9, fontWeight: 600, opacity: 0.8 }}>טווח ×1.6</span>
+                  </button>
+                  <button
+                    onPointerDown={() => sellTower(upgradeTowerData.id)}
+                    style={{
+                      flex: 0.7, padding: '10px 4px', borderRadius: 10,
+                      border: '1.5px solid rgba(220,80,80,0.35)',
+                      background: 'rgba(180,40,40,0.18)',
+                      color: '#ff8888', fontSize: 11, fontWeight: 700,
+                      cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
+                      lineHeight: 1.4, textAlign: 'center',
+                    }}
+                  >
+                    🗑<br/><span style={{ fontSize: 9 }}>+${sellAmt}</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: 8 }}>
+                {/* Branch badge */}
+                {(upgradeTowerData as any).branch && (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: '0 8px', borderRadius: 8,
+                    border: `1px solid ${(upgradeTowerData as any).branch === 'dmg' ? '#ff6644' : '#44aaff'}44`,
+                    background: (upgradeTowerData as any).branch === 'dmg' ? 'rgba(180,60,30,0.3)' : 'rgba(30,80,180,0.3)',
+                    color: (upgradeTowerData as any).branch === 'dmg' ? '#ffaa88' : '#88ccff',
+                    fontSize: 10, fontWeight: 700, flexShrink: 0,
+                  }}>
+                    {(upgradeTowerData as any).branch === 'dmg' ? '⚔' : '🛡'}
+                  </div>
+                )}
+                {/* Upgrade button */}
+                <button
                   disabled={!canUpg}
                   onPointerDown={() => { if (canUpg) upgradeTower(upgradeTowerData.id); }}
                   style={{
@@ -504,23 +637,24 @@ export function HUD() {
                 >
                   {canUpg ? `⬆ שדרג  $${upgCost}` : `צריך $${upgCost}`}
                 </button>
-              {/* Sell button */}
-              <button
-                onPointerDown={() => sellTower(upgradeTowerData.id)}
-                style={{
-                  flex: 1, padding: '11px 0', borderRadius: 11,
-                  border: '1.5px solid rgba(220,80,80,0.35)',
-                  background: 'rgba(180,40,40,0.18)',
-                  color: '#ff8888', fontSize: 12, fontWeight: 700,
-                  cursor: 'pointer',
-                  WebkitTapHighlightColor: 'transparent',
-                  transition: 'all 0.15s',
-                }}
-              >
-                🗑 מכור<br/>
-                <span style={{ fontSize: 11, color: '#ffaaaa', fontWeight: 600 }}>+${sellAmt}</span>
-              </button>
-            </div>
+                {/* Sell button */}
+                <button
+                  onPointerDown={() => sellTower(upgradeTowerData.id)}
+                  style={{
+                    flex: 1, padding: '11px 0', borderRadius: 11,
+                    border: '1.5px solid rgba(220,80,80,0.35)',
+                    background: 'rgba(180,40,40,0.18)',
+                    color: '#ff8888', fontSize: 12, fontWeight: 700,
+                    cursor: 'pointer',
+                    WebkitTapHighlightColor: 'transparent',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  🗑 מכור<br/>
+                  <span style={{ fontSize: 11, color: '#ffaaaa', fontWeight: 600 }}>+${sellAmt}</span>
+                </button>
+              </div>
+            )}
           </div>
         );
       })()}

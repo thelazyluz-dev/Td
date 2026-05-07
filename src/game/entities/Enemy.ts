@@ -19,9 +19,13 @@ export class Enemy {
   reachedEnd: boolean = false;
   isDead: boolean = false;
 
-  // Milestone 1 doesn't need all specials; we store them for future milestones
   isFrozen: boolean = false;
-  slowMult: number = 1.0;
+  slowMult: number = 1.0;       // area slow (reset each frame by CombatSystem)
+  activeSlowMult: number = 1.0; // hit-based slow (persists with timer)
+  slowTimer: number = 0;
+  stunTimer: number = 0;
+  waveSpeedMult: number = 1.0;  // speed modifier from wave type
+  armorMult: number = 1.0;      // damage resistance (armorMult=2 → takes half damage)
   damageAmp: number = 0; // extra damage multiplier applied by utility towers
 
   constructor(def: EnemyDef, waveHpMult = 1.0) {
@@ -38,7 +42,15 @@ export class Enemy {
 
   update(dt: number) {
     if (this.isDead || this.reachedEnd) return;
-    const effectiveSpeed = this.isFrozen ? 0 : this.speed * this.slowMult;
+    if (this.stunTimer > 0) {
+      this.stunTimer = Math.max(0, this.stunTimer - dt);
+    }
+    if (this.slowTimer > 0) {
+      this.slowTimer = Math.max(0, this.slowTimer - dt);
+      if (this.slowTimer === 0) this.activeSlowMult = 1.0;
+    }
+    const frozen = this.isFrozen || this.stunTimer > 0;
+    const effectiveSpeed = frozen ? 0 : this.speed * this.slowMult * this.activeSlowMult * this.waveSpeedMult;
     this.distanceTravelled += effectiveSpeed * dt;
     if (this.distanceTravelled >= PATH_TOTAL_LENGTH) {
       this.distanceTravelled = PATH_TOTAL_LENGTH;
@@ -48,7 +60,8 @@ export class Enemy {
   }
 
   takeDamage(amount: number) {
-    this.hp -= amount;
+    const actual = this.armorMult > 1 ? amount / this.armorMult : amount;
+    this.hp -= actual;
     if (this.hp <= 0) {
       this.hp = 0;
       this.isDead = true;
