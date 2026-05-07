@@ -22,6 +22,7 @@ export class Enemy {
   // Milestone 1 doesn't need all specials; we store them for future milestones
   isFrozen: boolean = false;
   slowMult: number = 1.0;
+  damageAmp: number = 0; // extra damage multiplier applied by utility towers
 
   constructor(def: EnemyDef, waveHpMult = 1.0) {
     this.id = _nextId++;

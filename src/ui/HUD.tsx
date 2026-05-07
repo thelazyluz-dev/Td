@@ -2,41 +2,41 @@ import { useGameStore } from '../store/gameStore';
 import { TOWER_DEFS } from '../game/data/towers';
 
 const TOWER_ICONS: Record<string, string> = {
-  BugSpray:  '🪲',
-  Swatter:   '🥊',
-  Zapper:    '⚡',
-  Sprinkler: '💦',
-  MagGlass:  '🔆',
-  PoisonBomb:'☠️',
-  GlueTrap:  '🍯',
-  BugLight:  '💡',
+  BugSpray:   '🪲',
+  Swatter:    '🥊',
+  Zapper:     '⚡',
+  Sprinkler:  '💦',
+  MagGlass:   '🔆',
+  PoisonBomb: '☠️',
+  GlueTrap:   '🍯',
+  BugLight:   '💡',
 };
 
 const TOWER_COLORS: Record<string, string> = {
-  BugSpray:  '#44aaff',
-  Swatter:   '#ff7722',
-  Zapper:    '#ffee00',
-  Sprinkler: '#44cc88',
-  MagGlass:  '#ffaa00',
-  PoisonBomb:'#88cc00',
-  GlueTrap:  '#ddaa00',
-  BugLight:  '#ffff44',
+  BugSpray:   '#44aaff',
+  Swatter:    '#ff7722',
+  Zapper:     '#ffee00',
+  Sprinkler:  '#44cc88',
+  MagGlass:   '#ffaa00',
+  PoisonBomb: '#88cc00',
+  GlueTrap:   '#ddaa00',
+  BugLight:   '#ffff44',
 };
 
 export function HUD() {
   const {
     state, selectedTower, selectedUpgradeTowerId,
-    selectTower, skipBuild, airStrike, empBlast,
+    selectTower, skipBuild, sendNextWave, airStrike, empBlast,
     selectForUpgrade, upgradeTower,
   } = useGameStore();
   if (!state) return null;
 
   const inBuild = state.phase === 'build';
   const inWave  = state.phase === 'wave';
+  const showShop = inBuild || inWave;
   const hpPct   = state.baseHp / state.baseMaxHp;
   const hpColor = hpPct > 0.6 ? '#ff4444' : hpPct > 0.3 ? '#fbbf24' : '#ff2020';
 
-  // Find the selected upgrade tower
   const upgradeTowerData = selectedUpgradeTowerId != null
     ? state.towers.find(t => t.id === selectedUpgradeTowerId)
     : null;
@@ -82,18 +82,39 @@ export function HUD() {
             {inBuild && (
               <span className="flex items-center gap-1" style={{ color: '#44ee88', fontWeight: 600, fontSize: 10 }}>
                 <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: '#44ee88' }} />
-                Build {Math.ceil(state.buildTimeLeft)}s
+                בנה
               </span>
             )}
             {inWave && (
               <span className="flex items-center gap-1" style={{ color: '#ff9944', fontWeight: 600, fontSize: 10 }}>
                 <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: '#ff9944' }} />
-                Active
+                גל פעיל
               </span>
             )}
             {inBuild && (
               <button onPointerDown={() => skipBuild()} style={{ background: '#16a34a', border: '1px solid #22c55e', color: '#fff', borderRadius: 6, fontSize: 11, fontWeight: 700, padding: '4px 12px', minHeight: 28, cursor: 'pointer', WebkitTapHighlightColor: 'transparent', boxShadow: '0 0 8px rgba(34,197,94,0.5)' }}>
                 ▶ מוכן!
+              </button>
+            )}
+            {inWave && state.canSendNextWave && (
+              <button
+                onPointerDown={() => sendNextWave()}
+                style={{
+                  background: 'rgba(160,100,0,0.8)',
+                  border: '1px solid #cc9900',
+                  color: '#ffe066',
+                  borderRadius: 6,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  padding: '4px 8px',
+                  minHeight: 28,
+                  cursor: 'pointer',
+                  WebkitTapHighlightColor: 'transparent',
+                  boxShadow: '0 0 8px rgba(200,150,0,0.45)',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                ⚡ גל הבא +${state.earlyWaveBonus}
               </button>
             )}
             {state.airStrikeCharges > 0 && (
@@ -109,8 +130,8 @@ export function HUD() {
           </div>
         </div>
 
-        {/* ── Tower shop ── */}
-        {inBuild && (
+        {/* ── Tower shop (build + wave) ── */}
+        {showShop && (
           <div
             className="flex gap-1 px-1.5 py-1 overflow-x-auto pointer-events-auto"
             style={{
@@ -168,12 +189,8 @@ export function HUD() {
       {upgradeTowerData && (
         <div
           style={{
-            position: 'fixed',
-            bottom: 0,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: '100%',
-            maxWidth: 440,
+            position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
+            width: '100%', maxWidth: 440,
             background: 'rgba(0,18,0,0.96)',
             borderTop: '2px solid rgba(80,220,80,0.35)',
             borderLeft: '1px solid rgba(80,220,80,0.15)',
@@ -186,14 +203,13 @@ export function HUD() {
             pointerEvents: 'auto',
           }}
         >
-          {/* Header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 22 }}>{TOWER_ICONS[upgradeTowerData.type] ?? '🗼'}</span>
               <div>
                 <div style={{ color: '#e0ffe0', fontWeight: 700, fontSize: 15 }}>{upgradeTowerData.type}</div>
                 <div style={{ display: 'flex', gap: 3, marginTop: 2 }}>
-                  {[0, 1, 2].map(i => (
+                  {[0,1,2].map(i => (
                     <span key={i} style={{ fontSize: 12, color: i < upgradeTowerData.upgrades ? '#ffd700' : 'rgba(255,255,255,0.2)' }}>
                       {i < upgradeTowerData.upgrades ? '●' : '○'}
                     </span>
@@ -201,102 +217,60 @@ export function HUD() {
                 </div>
               </div>
             </div>
-            <button
-              onPointerDown={() => selectForUpgrade(null)}
-              style={{
-                background: 'rgba(255,255,255,0.08)',
-                border: '1px solid rgba(255,255,255,0.15)',
-                color: 'rgba(255,255,255,0.6)',
-                borderRadius: 6,
-                padding: '3px 10px',
-                fontSize: 12,
-                cursor: 'pointer',
-                WebkitTapHighlightColor: 'transparent',
-              }}
-            >
-              Close
+            <button onPointerDown={() => selectForUpgrade(null)} style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.6)', borderRadius: 6, padding: '3px 10px', fontSize: 12, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}>
+              סגור
             </button>
           </div>
 
-          {/* Current stats */}
           <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
             {(() => {
               const def = TOWER_DEFS[upgradeTowerData.type];
               if (!def) return null;
-              const dps = def.dps > 0
-                ? Math.round(def.dps * upgradeTowerData.damageMultiplier * upgradeTowerData.fireRateMultiplier * 10) / 10
-                : 0;
+              const dps = def.dps > 0 ? Math.round(def.dps * upgradeTowerData.damageMultiplier * upgradeTowerData.fireRateMultiplier * 10) / 10 : 0;
               const range = Math.round(def.range * upgradeTowerData.rangeMultiplier);
               return (
                 <>
-                  <Stat label="DPS" value={dps > 0 ? String(dps) : '—'} color="#ff9944" />
-                  <Stat label="Range" value={range > 0 ? String(range) : '—'} color="#44ccff" />
-                  <Stat label="Level" value={`${upgradeTowerData.upgrades} / 3`} color="#ffd700" />
+                  {dps > 0 && <Stat label="DPS" value={String(dps)} color="#ff9944" />}
+                  {range > 0 && <Stat label="טווח" value={String(range)} color="#44ccff" />}
+                  <Stat label="רמה" value={`${upgradeTowerData.upgrades}/3`} color="#ffd700" />
+                  {upgradeTowerData.type === 'GlueTrap' && <Stat label="האטה" value="70%" color="#ddaa00" />}
+                  {upgradeTowerData.type === 'BugLight' && <Stat label="נזק+" value="+35%" color="#ffff44" />}
                 </>
               );
             })()}
           </div>
 
-          {/* Next level info */}
           {upgradeTowerData.upgrades < 3 ? (
-            <div style={{
-              background: 'rgba(80,200,80,0.08)',
-              border: '1px solid rgba(80,200,80,0.2)',
-              borderRadius: 8,
-              padding: '8px 12px',
-              marginBottom: 12,
-              fontSize: 11,
-              color: 'rgba(200,255,200,0.7)',
-            }}>
-              <span style={{ color: '#88ee88', fontWeight: 700 }}>Next level gives: </span>
-              +50% DPS &nbsp;·&nbsp; +10% Range &nbsp;·&nbsp; +20% Fire Rate
+            <div style={{ background: 'rgba(80,200,80,0.08)', border: '1px solid rgba(80,200,80,0.2)', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 11, color: 'rgba(200,255,200,0.7)' }}>
+              <span style={{ color: '#88ee88', fontWeight: 700 }}>שדרוג הבא: </span>
+              +50% נזק &nbsp;·&nbsp; +10% טווח &nbsp;·&nbsp; +20% קצב ירי
             </div>
           ) : (
-            <div style={{
-              background: 'rgba(255,200,0,0.08)',
-              border: '1px solid rgba(255,200,0,0.25)',
-              borderRadius: 8,
-              padding: '8px 12px',
-              marginBottom: 12,
-              fontSize: 11,
-              color: '#ffd700',
-              textAlign: 'center',
-              fontWeight: 700,
-            }}>
-              ★ Fully Upgraded ★
+            <div style={{ background: 'rgba(255,200,0,0.08)', border: '1px solid rgba(255,200,0,0.25)', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 11, color: '#ffd700', textAlign: 'center', fontWeight: 700 }}>
+              ★ שודרג במלואו ★
             </div>
           )}
 
-          {/* Upgrade button */}
           {upgradeTowerData.upgrades < 3 && (() => {
             const cost = upgradeTowerData.upgradeCost;
             const canAfford = state.gold >= cost;
             return (
               <button
                 disabled={!canAfford}
-                onPointerDown={() => {
-                  if (canAfford) {
-                    upgradeTower(upgradeTowerData.id);
-                  }
-                }}
+                onPointerDown={() => { if (canAfford) upgradeTower(upgradeTowerData.id); }}
                 style={{
-                  width: '100%',
-                  padding: '10px 0',
-                  borderRadius: 10,
+                  width: '100%', padding: '10px 0', borderRadius: 10,
                   border: `2px solid ${canAfford ? '#ffd700' : 'rgba(255,255,255,0.1)'}`,
-                  background: canAfford
-                    ? 'linear-gradient(135deg, rgba(180,130,0,0.5), rgba(120,80,0,0.5))'
-                    : 'rgba(255,255,255,0.04)',
+                  background: canAfford ? 'linear-gradient(135deg, rgba(180,130,0,0.5), rgba(120,80,0,0.5))' : 'rgba(255,255,255,0.04)',
                   color: canAfford ? '#ffd700' : 'rgba(255,255,255,0.25)',
-                  fontSize: 14,
-                  fontWeight: 700,
+                  fontSize: 14, fontWeight: 700,
                   cursor: canAfford ? 'pointer' : 'not-allowed',
                   WebkitTapHighlightColor: 'transparent',
                   boxShadow: canAfford ? '0 0 16px rgba(255,200,0,0.2)' : 'none',
                   transition: 'all 0.15s',
                 }}
               >
-                {canAfford ? `⬆ Upgrade — $${cost}` : `Need $${cost} (have $${state.gold})`}
+                {canAfford ? `⬆ שדרג — $${cost}` : `צריך $${cost} (יש $${state.gold})`}
               </button>
             );
           })()}
@@ -315,7 +289,6 @@ function Stat({ label, value, color }: { label: string; value: string; color: st
   );
 }
 
-/** Convert CSS hex color like '#ff7722' to 'r,g,b' string for rgba() usage */
 function hexToRgb(hex: string): string {
   const clean = hex.replace('#', '');
   const r = parseInt(clean.slice(0, 2), 16);

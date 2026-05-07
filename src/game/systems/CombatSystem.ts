@@ -37,6 +37,24 @@ export class CombatSystem {
   ) {
     const aliveEnemies = enemies.filter((e) => !e.isDead && !e.reachedEnd);
 
+    // Reset per-frame utility effects so they only apply while in range
+    for (const e of aliveEnemies) { e.slowMult = 1.0; e.damageAmp = 0; }
+
+    // Utility towers: GlueTrap slows 70%, BugLight amplifies damage taken +35%
+    for (const tower of towers) {
+      if (tower.type === 'GlueTrap' && tower.effectiveRange > 0) {
+        for (const e of aliveEnemies) {
+          if (Math.hypot(e.pos.x - tower.pos.x, e.pos.y - tower.pos.y) <= tower.effectiveRange)
+            e.slowMult = Math.min(e.slowMult, 0.30);
+        }
+      } else if (tower.type === 'BugLight' && tower.effectiveRange > 0) {
+        for (const e of aliveEnemies) {
+          if (Math.hypot(e.pos.x - tower.pos.x, e.pos.y - tower.pos.y) <= tower.effectiveRange)
+            e.damageAmp = Math.max(e.damageAmp, 0.35);
+        }
+      }
+    }
+
     // Tower targeting & firing
     const lastStandActive = baseHp === 1 && upgrades.lastStandFireMult > 1;
     const berserkerActive = baseHp / baseMaxHp < 0.5 && upgrades.berserkerBonus > 0;
@@ -103,6 +121,7 @@ export class CombatSystem {
 
     let dmg = proj.damage * (1 + upgrades.globalDamageBonus);
     if (berserkerActive) dmg *= 1 + upgrades.berserkerBonus;
+    if (target.damageAmp > 0) dmg *= 1 + target.damageAmp; // BugLight amplification
 
     // Crit
     if (upgrades.critChance > 0 && Math.random() < upgrades.critChance) dmg *= 2;

@@ -9,9 +9,11 @@ import { WAVE_DEFS } from '../data/waves';
 import { BALANCE } from '../balance';
 import type { GamePhase, Vec2 } from '../entities/types';
 
+const EARLY_WAVE_BONUS = 50;
+
 export interface GameState {
   phase: GamePhase;
-  wave: number; // 1-based
+  wave: number; // 1-based display (highest committed wave)
   baseHp: number;
   baseMaxHp: number;
   gold: number;
@@ -20,9 +22,11 @@ export interface GameState {
   projectiles: Readonly<Projectile[]>;
   buildTimeLeft: number;
   upgrades: CombatUpgrades;
-  surviveOnce: boolean; // adrenaline shot
+  surviveOnce: boolean;
   airStrikeCharges: number;
   empCharges: number;
+  canSendNextWave: boolean;
+  earlyWaveBonus: number;
 }
 
 type StateListener = (state: GameState) => void;
@@ -30,13 +34,15 @@ type StateListener = (state: GameState) => void;
 export class GameEngine {
   private enemies: Enemy[] = [];
   private towers: Tower[] = [];
-  private waveSystem = new WaveSystem();
+  private waveSystems: WaveSystem[] = [];
   private combatSystem = new CombatSystem();
   private economySystem: EconomySystem;
   private phase: GamePhase = 'build';
   private baseHp: number;
   private baseMaxHp: number;
-  private waveIndex: number = 0;
+  // Highest 0-based wave index that has been committed (started or in build for)
+  private committedWaveIdx: number = 0;
+  private earlyWaveSentThisRound: boolean = false;
   private buildTimer: number = BALANCE.BUILD_PHASE_DURATION;
   private upgrades: CombatUpgrades = { ...DEFAULT_COMBAT_UPGRADES };
   private surviveOnce = false;
@@ -66,9 +72,12 @@ export class GameEngine {
   }
 
   getState(): GameState {
+    const canSend = this.phase === 'wave'
+      && !this.earlyWaveSentThisRound
+      && this.committedWaveIdx < WAVE_DEFS.length - 1;
     return {
       phase: this.phase,
-      wave: this.waveIndex + 1,
+      wave: this.committedWaveIdx + 1,
       baseHp: this.baseHp,
       baseMaxHp: this.baseMaxHp,
       gold: this.economySystem.gold,
@@ -80,6 +89,8 @@ export class GameEngine {
       surviveOnce: this.surviveOnce,
       airStrikeCharges: this.airStrikeCharges,
       empCharges: this.empCharges,
+      canSendNextWave: canSend,
+      earlyWaveBonus: EARLY_WAVE_BONUS,
     };
   }
 
@@ -98,7 +109,7 @@ export class GameEngine {
 
   private loop = (ts: number) => {
     if (this.lastTs === null) this.lastTs = ts;
-    const dt = Math.min((ts - this.lastTs) / 1000, 0.1); // cap at 100ms
+    const dt = Math.min((ts - this.lastTs) / 1000, 0.1);
     this.lastTs = ts;
     this.tick(dt);
     if (this.phase !== 'gameover' && this.phase !== 'win') {
@@ -109,22 +120,24 @@ export class GameEngine {
   private tick(dt: number) {
     switch (this.phase) {
       case 'build': this.tickBuild(dt); break;
-      case 'wave': this.tickWave(dt); break;
+      case 'wave':  this.tickWave(dt);  break;
     }
     this.emit();
   }
 
   private tickBuild(_dt: number) {
-    // Build phase waits for player to press Ready — no auto-countdown
+    // Build phase: player presses Ready to start
   }
 
   private beginWave() {
     this.phase = 'wave';
-    this.waveSystem.startWave(this.waveIndex);
+    this.earlyWaveSentThisRound = false;
+    const ws = new WaveSystem();
+    ws.startWave(this.committedWaveIdx);
+    this.waveSystems = [ws];
   }
 
   private tickWave(dt: number) {
-    // HP regen
     if (this.regenHPPerThirty > 0) {
       this.regenTimer += dt;
       while (this.regenTimer >= 30) {
@@ -133,13 +146,13 @@ export class GameEngine {
       }
     }
 
-    // Spawn enemies
-    this.waveSystem.update(dt, (enemy) => this.enemies.push(enemy));
+    // Spawn from all active wave systems
+    for (const ws of this.waveSystems) {
+      ws.update(dt, (enemy) => this.enemies.push(enemy));
+    }
 
-    // Update enemies
     for (const e of this.enemies) e.update(dt);
 
-    // Handle enemies reaching end
     const reachedEnd = this.enemies.filter((e) => e.reachedEnd && !e.isDead);
     for (const e of reachedEnd) {
       e.isDead = true;
@@ -157,39 +170,27 @@ export class GameEngine {
       }
     }
 
-    // Combat
     this.combatSystem.update(
-      dt,
-      this.towers,
-      this.enemies,
-      this.upgrades,
-      this.baseHp,
-      this.baseMaxHp,
-      (lifeAmount) => {
-        this.baseHp = Math.min(this.baseMaxHp, this.baseHp + lifeAmount);
-      },
-      (gold) => {
-        this.economySystem.earn(gold, this.goldMult);
-      },
+      dt, this.towers, this.enemies, this.upgrades,
+      this.baseHp, this.baseMaxHp,
+      (life) => { this.baseHp = Math.min(this.baseMaxHp, this.baseHp + life); },
+      (gold) => { this.economySystem.earn(gold, this.goldMult); },
     );
 
-    // Economy passive
     this.economySystem.update(dt);
-
-    // Prune dead/arrived enemies
     this.enemies = this.enemies.filter((e) => !e.isDead || e.reachedEnd);
 
-    // Check wave complete
-    const allSpawned = this.waveSystem.isFinished;
+    // All wave systems done + all enemies cleared = wave over
+    const allSpawned = this.waveSystems.every(ws => ws.isFinished);
     const allDead = this.enemies.every((e) => e.isDead || e.reachedEnd);
     if (allSpawned && allDead) this.endWave();
   }
 
   private endWave() {
-    if (this.waveIndex >= WAVE_DEFS.length - 1) {
+    if (this.committedWaveIdx >= WAVE_DEFS.length - 1) {
       this.phase = 'win';
     } else {
-      this.waveIndex++;
+      this.committedWaveIdx++;
       this.buildTimer = BALANCE.BUILD_PHASE_DURATION;
       this.phase = 'build';
     }
@@ -201,21 +202,18 @@ export class GameEngine {
     const def = TOWER_DEFS[type];
     if (!def) return false;
     if (!this.economySystem.spend(def.cost)) return false;
-    const tower = new Tower(def, pos);
-    this.towers.push(tower);
+    this.towers.push(new Tower(def, pos));
     this.emit();
     return true;
   }
 
   upgradeTower(towerId: number): boolean {
     const tower = this.towers.find(t => t.id === towerId);
-    if (!tower) return false;
-    if (tower.upgrades >= 3) return false;
-    const cost = tower.upgradeCost;
-    if (!this.economySystem.spend(cost)) return false;
+    if (!tower || tower.upgrades >= 3) return false;
+    if (!this.economySystem.spend(tower.upgradeCost)) return false;
     tower.upgrades++;
-    tower.damageMultiplier = 1 + tower.upgrades * 0.5;
-    tower.rangeMultiplier = 1 + tower.upgrades * 0.1;
+    tower.damageMultiplier   = 1 + tower.upgrades * 0.5;
+    tower.rangeMultiplier    = 1 + tower.upgrades * 0.1;
     tower.fireRateMultiplier = 1 + tower.upgrades * 0.2;
     this.emit();
     return true;
@@ -223,8 +221,20 @@ export class GameEngine {
 
   skipBuild() {
     if (this.phase !== 'build') return;
-    this.buildTimer = 0;
     this.beginWave();
+    this.emit();
+  }
+
+  sendNextWave() {
+    if (this.phase !== 'wave') return;
+    if (this.earlyWaveSentThisRound) return;
+    if (this.committedWaveIdx >= WAVE_DEFS.length - 1) return;
+    this.earlyWaveSentThisRound = true;
+    this.committedWaveIdx++;
+    this.economySystem.earn(EARLY_WAVE_BONUS, this.goldMult);
+    const ws = new WaveSystem();
+    ws.startWave(this.committedWaveIdx);
+    this.waveSystems.push(ws);
     this.emit();
   }
 
@@ -232,9 +242,8 @@ export class GameEngine {
     if (this.airStrikeCharges <= 0) return;
     this.airStrikeCharges--;
     for (const e of this.enemies) if (!e.isDead && !e.reachedEnd) {
-      const gold = e.goldReward;
       e.isDead = true;
-      this.economySystem.earn(gold, this.goldMult);
+      this.economySystem.earn(e.goldReward, this.goldMult);
     }
     this.emit();
   }
@@ -251,11 +260,10 @@ export class GameEngine {
   }
 
   applyUpgrade(id: string) {
-    // Upgrade effects applied here; full implementation in Milestone 3
     console.log('upgrade applied:', id);
     this.phase = 'build';
     this.buildTimer = BALANCE.BUILD_PHASE_DURATION;
-    this.waveIndex++;
+    this.committedWaveIdx++;
     this.emit();
   }
 }

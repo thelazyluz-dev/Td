@@ -12,6 +12,7 @@ interface GameStore {
   selectTower: (type: string | null) => void;
   placeTower: (pos: Vec2) => void;
   skipBuild: () => void;
+  sendNextWave: () => void;
   airStrike: () => void;
   empBlast: () => void;
   resetGame: () => void;
@@ -49,6 +50,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   skipBuild() {
     get().engine?.skipBuild();
+  },
+
+  sendNextWave() {
+    get().engine?.sendNextWave();
   },
 
   airStrike() {

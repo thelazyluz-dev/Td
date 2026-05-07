@@ -276,20 +276,34 @@ export class Renderer {
       }
     }
 
-    // Start marker
+    // Ant hill start marker
     const s = pts[0];
-    g.circle(s.x, s.y, 10).fill({ color: 0x22c55e });
-    g.setStrokeStyle({ width: 2, color: 0x166534 }); g.circle(s.x, s.y, 10).stroke();
-    g.rect(s.x - 1.5, s.y - 14, 3, 14).fill({ color: 0x166534 });
-    g.poly([s.x+1.5, s.y-14, s.x+9, s.y-10, s.x+1.5, s.y-7]).fill({ color: 0x22c55e });
+    g.circle(s.x, s.y, 14).fill({ color: 0x8b4513 });
+    g.circle(s.x, s.y, 11).fill({ color: 0xa0522d });
+    g.circle(s.x, s.y-5, 7).fill({ color: 0x8b4513 });
+    g.circle(s.x-6, s.y+2, 5).fill({ color: 0x8b4513 });
+    g.circle(s.x+5, s.y+3, 5).fill({ color: 0x8b4513 });
+    // Entry holes
+    g.circle(s.x, s.y, 4).fill({ color: 0x3d2008 });
+    g.circle(s.x-5, s.y+4, 3).fill({ color: 0x3d2008 });
+    g.circle(s.x+4, s.y+5, 2).fill({ color: 0x3d2008 });
 
-    // End marker
+    // House end marker
     const e = pts[pts.length - 1];
-    g.circle(e.x, e.y, 10).fill({ color: 0xdc2626 });
-    g.setStrokeStyle({ width: 2, color: 0x7f1d1d }); g.circle(e.x, e.y, 10).stroke();
-    g.setStrokeStyle({ width: 2.5, color: 0x7f1d1d });
-    g.moveTo(e.x-5, e.y-5).lineTo(e.x+5, e.y+5).stroke();
-    g.moveTo(e.x+5, e.y-5).lineTo(e.x-5, e.y+5).stroke();
+    const hx = e.x, hy = e.y;
+    // House body
+    g.roundRect(hx-13, hy-8, 26, 22, 2).fill({ color: 0xf5deb3 });
+    g.setStrokeStyle({ width: 1.5, color: 0xcc9944 }); g.roundRect(hx-13, hy-8, 26, 22, 2).stroke();
+    // Roof
+    g.poly([hx-15, hy-8, hx+15, hy-8, hx, hy-24]).fill({ color: 0xcc4422 });
+    g.setStrokeStyle({ width: 1.5, color: 0x882211 }); g.poly([hx-15, hy-8, hx+15, hy-8, hx, hy-24]).stroke();
+    // Door
+    g.roundRect(hx-4, hy+2, 8, 12, 2).fill({ color: 0x8b4513 });
+    // Window
+    g.roundRect(hx-10, hy-4, 7, 7, 1).fill({ color: 0xaaddff });
+    g.setStrokeStyle({ width: 1, color: 0x888888 });
+    g.moveTo(hx-6.5, hy-4).lineTo(hx-6.5, hy+3).stroke();
+    g.moveTo(hx-10, hy-0.5).lineTo(hx-3, hy-0.5).stroke();
 
     this.pathLayer.addChild(g);
   }
@@ -461,57 +475,119 @@ export class Renderer {
     ring.circle(0, 0, range).stroke();
     cont.addChild(ring);
 
-    // Base shape (varies by type)
     const base = new Graphics();
-    const half = TILE * 0.38;
+    const R = TILE * 0.42;
     switch (type) {
-      case 'Zapper':
-        base.poly([-half*0.7,-half, half*0.7,-half, half,-0, half*0.7,half, -half*0.7,half, -half,0]).fill({ color });
-        break;
-      case 'PoisonBomb':
-        base.circle(0, 0, TILE*0.42).fill({ color });
-        base.circle(0, 0, TILE*0.28).fill({ color: 0x225500 });
-        // skull mark
-        base.circle(0, -TILE*0.08, TILE*0.12).fill({ color: 0x000000, alpha: 0.5 });
-        break;
-      case 'GlueTrap': {
-        // Honeycomb/sticky cross
-        base.setStrokeStyle({ width: 4, color: 0xddaa00 });
-        [-45,-135,45,135].forEach(a => {
-          const rad = a * Math.PI/180;
-          base.moveTo(0,0).lineTo(Math.cos(rad)*TILE*0.45, Math.sin(rad)*TILE*0.45);
-        });
-        base.stroke();
-        base.circle(0,0,5).fill({ color: 0xffee88 });
+      case 'BugSpray': {
+        // Aerosol can: tall cylindrical body
+        base.roundRect(-R*0.55, -R*0.9, R*1.1, R*1.8, 5).fill({ color });
+        // Label band
+        base.roundRect(-R*0.55, -R*0.15, R*1.1, R*0.5, 0).fill({ color: adjustColor(color, 0.7) });
+        // Nozzle tip
+        base.roundRect(-R*0.2, -R*1.05, R*0.4, R*0.18, 3).fill({ color: 0x888888 });
+        // Cap
+        base.roundRect(-R*0.35, -R*1.02, R*0.7, R*0.14, 3).fill({ color: 0x444444 });
         break;
       }
-      case 'BugLight':
-        base.roundRect(-half*0.55, -half*1.1, half*1.1, half*2.2, 3).fill({ color });
-        base.roundRect(-half*0.7, half*0.5, half*1.4, half*0.8, 2).fill({ color: adjustColor(color, 0.8) });
-        // light glow
-        base.circle(0, -half*0.5, half*0.5).fill({ color: 0xffffaa, alpha: 0.4 });
+      case 'Swatter': {
+        // Flat paddle base
+        base.roundRect(-R*0.75, -R*0.2, R*1.5, R*0.6, 5).fill({ color });
+        // Grid holes
+        base.setStrokeStyle({ width: 1.5, color: 0x000000, alpha: 0.25 });
+        for (let xi = -1; xi <= 1; xi++) {
+          base.moveTo(xi * R*0.35, -R*0.1).lineTo(xi * R*0.35, R*0.3).stroke();
+          base.moveTo(-R*0.55, xi*R*0.1 + R*0.1).lineTo(R*0.55, xi*R*0.1 + R*0.1).stroke();
+        }
         break;
-      case 'MagGlass':
-        base.circle(0, 0, TILE*0.38).fill({ color });
-        base.circle(0, 0, TILE*0.25).fill({ color: 0xffffff, alpha: 0.25 });
-        base.circle(0, 0, TILE*0.38).fill({ color: adjustColor(color, 0.7), alpha: 0.0 });
-        base.setStrokeStyle({ width: 2.5, color: adjustColor(color, 0.6) });
-        base.circle(0, 0, TILE*0.38).stroke();
+      }
+      case 'Zapper': {
+        // Electric racket base — round lamp housing
+        base.circle(0, 0, R*0.7).fill({ color: 0x333344 });
+        base.circle(0, 0, R*0.55).fill({ color });
+        // Electric arcs around
+        base.setStrokeStyle({ width: 1.5, color: 0xffee00, alpha: 0.8 });
+        for (let i = 0; i < 6; i++) {
+          const a = (Math.PI * 2 * i) / 6;
+          base.moveTo(Math.cos(a)*R*0.58, Math.sin(a)*R*0.58)
+              .lineTo(Math.cos(a)*R*0.72, Math.sin(a)*R*0.72).stroke();
+        }
         break;
+      }
+      case 'Sprinkler': {
+        // Round water tank
+        base.circle(0, 0, R*0.65).fill({ color: 0x224433 });
+        base.circle(0, 0, R*0.5).fill({ color });
+        // Water droplets around
+        base.setStrokeStyle({ width: 1, color: 0x88ffcc, alpha: 0.5 });
+        base.circle(0, 0, R*0.65).stroke();
+        break;
+      }
+      case 'MagGlass': {
+        // Magnifying glass — round lens + handle stub
+        base.circle(0, -R*0.1, R*0.55).fill({ color: 0x222222 });
+        base.circle(0, -R*0.1, R*0.44).fill({ color: 0xaaddff, alpha: 0.35 });
+        base.setStrokeStyle({ width: 3.5, color });
+        base.circle(0, -R*0.1, R*0.5).stroke();
+        // Handle
+        base.setStrokeStyle({ width: 5, color: adjustColor(color, 0.7) });
+        base.moveTo(R*0.32, R*0.32).lineTo(R*0.62, R*0.62).stroke();
+        break;
+      }
+      case 'PoisonBomb': {
+        // Round bomb
+        base.circle(0, R*0.08, R*0.62).fill({ color: 0x222222 });
+        base.circle(0, R*0.08, R*0.55).fill({ color });
+        // Skull
+        base.circle(0, R*0.05, R*0.22).fill({ color: 0x000000, alpha: 0.4 });
+        base.circle(-R*0.1, R*0.18, R*0.07).fill({ color: 0x000000, alpha: 0.4 });
+        base.circle( R*0.1, R*0.18, R*0.07).fill({ color: 0x000000, alpha: 0.4 });
+        // Fuse
+        base.setStrokeStyle({ width: 2, color: 0xdd8833 });
+        base.moveTo(R*0.18, -R*0.5).lineTo(R*0.05, -R*0.7).stroke();
+        base.circle(R*0.05, -R*0.72, 3).fill({ color: 0xff8800 });
+        break;
+      }
+      case 'GlueTrap': {
+        // Honeycomb flat pad
+        base.roundRect(-R*0.85, -R*0.45, R*1.7, R*0.9, 6).fill({ color: 0xcc8800 });
+        base.roundRect(-R*0.78, -R*0.38, R*1.56, R*0.76, 5).fill({ color });
+        // Honeycomb cells
+        base.setStrokeStyle({ width: 1.2, color: 0x885500, alpha: 0.6 });
+        for (let xi = -1; xi <= 1; xi++) {
+          for (let yi = 0; yi <= 0; yi++) {
+            const cx = xi * R*0.52, cy = yi * R*0.35;
+            base.moveTo(cx, cy - R*0.22).lineTo(cx+R*0.19, cy-R*0.11).stroke();
+            base.moveTo(cx+R*0.19, cy-R*0.11).lineTo(cx+R*0.19, cy+R*0.11).stroke();
+            base.moveTo(cx+R*0.19, cy+R*0.11).lineTo(cx, cy+R*0.22).stroke();
+          }
+        }
+        break;
+      }
+      case 'BugLight': {
+        // Lantern: rectangular body with glowing center
+        base.roundRect(-R*0.45, -R*0.8, R*0.9, R*1.6, 6).fill({ color: 0x333322 });
+        base.roundRect(-R*0.32, -R*0.65, R*0.64, R*1.3, 4).fill({ color: 0xffffaa, alpha: 0.25 });
+        base.circle(0, 0, R*0.3).fill({ color: 0xffff88, alpha: 0.9 });
+        base.circle(0, 0, R*0.18).fill({ color: 0xffffff });
+        // Glow corona
+        base.circle(0, 0, R*0.52).fill({ color: 0xffff44, alpha: 0.12 });
+        // Top cap
+        base.roundRect(-R*0.3, -R*0.9, R*0.6, R*0.14, 3).fill({ color: 0x555544 });
+        break;
+      }
       default:
-        base.roundRect(-half, -half, half*2, half*2, 5).fill({ color });
+        base.roundRect(-R, -R, R*2, R*2, 5).fill({ color });
     }
-    // Thick outline for cartoon look
-    base.setStrokeStyle({ width: 2.5, color: 0x000000, alpha: 0.6 });
-    base.circle(0, 0, half * 1.1).stroke();
+    // Outline
+    base.setStrokeStyle({ width: 2, color: 0x000000, alpha: 0.5 });
+    base.roundRect(-R*0.9, -R*0.9, R*1.8, R*1.8, 6).stroke();
     // Highlight
-    base.setStrokeStyle({ width: 1.5, color: 0xffffff, alpha: 0.18 });
-    base.circle(-half*0.3, -half*0.3, half*0.5).stroke();
+    base.circle(-R*0.28, -R*0.28, R*0.22).fill({ color: 0xffffff, alpha: 0.14 });
     cont.addChild(base);
 
     // Barrel container (rotates)
     const barrel = new Container();
-    if (type !== 'GlueTrap' && type !== 'BugLight') {
+    if (type !== 'GlueTrap' && type !== 'BugLight' && type !== 'MagGlass') {
       const bG = new Graphics();
       this.drawBarrel(bG, type);
       barrel.addChild(bG);
@@ -519,13 +595,13 @@ export class Renderer {
 
     // Muzzle flash
     const muzzle = new Graphics();
-    muzzle.circle(0, -TILE * 0.45, 9).fill({ color: 0xffee88 });
-    muzzle.circle(0, -TILE * 0.45, 5).fill({ color: 0xffffff });
+    muzzle.circle(0, -TILE * 0.48, 9).fill({ color: 0xffee88 });
+    muzzle.circle(0, -TILE * 0.48, 5).fill({ color: 0xffffff });
     muzzle.alpha = 0;
     barrel.addChild(muzzle);
     cont.addChild(barrel);
 
-    // Stars container (shown below tower)
+    // Stars container
     const starsContainer = new Container();
     cont.addChild(starsContainer);
 
@@ -539,39 +615,45 @@ export class Renderer {
 
   private drawBarrel(g: Graphics, type: string): void {
     switch (type) {
-      case 'Swatter':
-        // Wide flat swatter head
-        g.roundRect(-7, -TILE*0.38, 14, TILE*0.34, 2).fill({ color: 0xdd9944 });
-        g.poly([-9, -TILE*0.38, 9, -TILE*0.38, 11, -TILE*0.50, -11, -TILE*0.50]).fill({ color: 0xeeaa55 });
-        // Grid lines on swatter
-        g.setStrokeStyle({ width: 1, color: 0xcc7733, alpha: 0.7 });
-        g.moveTo(0, -TILE*0.38).lineTo(0, -TILE*0.50).stroke();
+      case 'BugSpray':
+        // Spray nozzle tube
+        g.roundRect(-3, -TILE*0.52, 6, TILE*0.46, 2).fill({ color: 0x88ccff });
+        g.circle(0, -TILE*0.52, 4.5).fill({ color: 0x44aaff });
         break;
+      case 'Swatter': {
+        // Handle + paddle head
+        g.roundRect(-2.5, -TILE*0.22, 5, TILE*0.18, 2).fill({ color: 0xddaa66 });
+        g.roundRect(-10, -TILE*0.44, 20, TILE*0.24, 3).fill({ color: 0xdd9944 });
+        // Grid on paddle
+        g.setStrokeStyle({ width: 1, color: 0x885500, alpha: 0.6 });
+        [-5, 0, 5].forEach(x => {
+          g.moveTo(x, -TILE*0.44).lineTo(x, -TILE*0.22).stroke();
+        });
+        g.moveTo(-9, -TILE*0.35).lineTo(9, -TILE*0.35).stroke();
+        break;
+      }
       case 'Zapper':
-        // Long slim electric probe
-        g.roundRect(-2, -TILE*0.65, 4, TILE*0.58, 1).fill({ color: 0xdddddd });
-        g.circle(0, -TILE*0.65, 4).fill({ color: 0xffee00 });
+        // Electric pole with zapper grid at tip
+        g.roundRect(-2.5, -TILE*0.62, 5, TILE*0.5, 1).fill({ color: 0xcccccc });
+        g.roundRect(-7, -TILE*0.72, 14, TILE*0.12, 2).fill({ color: 0xffee00 });
+        g.setStrokeStyle({ width: 1.5, color: 0xffee00, alpha: 0.8 });
+        g.moveTo(-5, -TILE*0.68).lineTo(5, -TILE*0.6).stroke();
         break;
       case 'Sprinkler': {
-        // Multiple spray nozzles
-        [-4, 0, 4].forEach(ox => {
-          g.roundRect(ox-1.5, -TILE*0.44, 3, TILE*0.38, 1).fill({ color: 0x88ddbb });
+        // Rotating head with 3 nozzles
+        g.roundRect(-2, -TILE*0.18, 4, TILE*0.14, 1).fill({ color: 0x55aa77 });
+        [-5, 0, 5].forEach(ox => {
+          g.roundRect(ox-1.5, -TILE*0.44, 3, TILE*0.28, 1).fill({ color: 0x44cc88 });
         });
         break;
       }
-      case 'MagGlass':
-        // Handle stem
-        g.poly([-3.5, -TILE*0.02, 3.5, -TILE*0.02, 5, -TILE*0.44, -5, -TILE*0.44]).fill({ color: 0xdd8844 });
-        g.circle(0, -TILE*0.44, TILE*0.15).fill({ color: 0xaaddff, alpha: 0.6 });
-        break;
       case 'PoisonBomb':
-        // Short fat tube
-        g.roundRect(-6, -TILE*0.30, 12, TILE*0.26, 3).fill({ color: 0x88cc44 });
-        g.circle(0, -TILE*0.30, 6).fill({ color: 0x225500 });
+        // Short mortar tube
+        g.roundRect(-5.5, -TILE*0.3, 11, TILE*0.26, 3).fill({ color: 0x88cc44 });
+        g.circle(0, -TILE*0.3, 5.5).fill({ color: 0x336600 });
         break;
       default:
-        // BugSpray: slim nozzle
-        g.roundRect(-3.5, -TILE*0.44, 7, TILE*0.40, 2).fill({ color: 0x88ccff });
+        g.roundRect(-3, -TILE*0.44, 6, TILE*0.38, 2).fill({ color: 0xdddddd });
     }
   }
 
@@ -673,216 +755,388 @@ export class Renderer {
   }
 
   private drawEnemyBody(g: Graphics, type: string, r: number, color: number): void {
-    const dark = adjustColor(color, 0.55);
+    const dark  = adjustColor(color, 0.5);
+    const light = adjustColor(color, 1.45);
 
     switch (type) {
+      /* ── ANT ─────────────────────────────────────────────────────── */
       case 'Ant': {
-        // Three ant segments: head, thorax, abdomen
-        g.ellipse(0, r*0.55, r*0.42, r*0.52).fill({ color });        // abdomen
-        g.circle(0, 0, r*0.3).fill({ color });                        // thorax
-        g.circle(0, -r*0.52, r*0.35).fill({ color });                 // head
-        // Antennae
-        g.setStrokeStyle({ width: 1.5, color: dark });
-        g.moveTo(-r*0.12, -r*0.78).lineTo(-r*0.45, -r*1.15).stroke();
-        g.moveTo( r*0.12, -r*0.78).lineTo( r*0.45, -r*1.15).stroke();
-        // Tiny end-balls on antennae
-        g.circle(-r*0.45, -r*1.15, r*0.09).fill({ color: dark });
-        g.circle( r*0.45, -r*1.15, r*0.09).fill({ color: dark });
-        // Eyes
-        g.circle(-r*0.18, -r*0.58, r*0.11).fill({ color: 0x000000 });
-        g.circle( r*0.18, -r*0.58, r*0.11).fill({ color: 0x000000 });
-        // Legs (3 pairs from thorax)
-        g.setStrokeStyle({ width: 1.2, color: dark });
-        [-0.5, 0, 0.5].forEach(yo => {
-          g.moveTo(-r*0.3, yo*r*0.35).lineTo(-r*0.8, yo*r*0.35 + r*0.2).stroke();
-          g.moveTo( r*0.3, yo*r*0.35).lineTo( r*0.8, yo*r*0.35 + r*0.2).stroke();
+        // 6 legs first (behind body)
+        g.setStrokeStyle({ width: 1.2, color: dark, alpha: 0.9 });
+        [[-0.55, -0.15], [0.55, -0.15], [-0.62, 0.05], [0.62, 0.05], [-0.5, 0.25], [0.5, 0.25]].forEach(([ex, ey]) => {
+          const sx = ex > 0 ? r*0.28 : -r*0.28;
+          g.moveTo(sx, ey*r).lineTo(ex*r, ey*r + r*0.3).stroke();
+          g.moveTo(ex*r, ey*r + r*0.3).lineTo(ex*r + (ex>0?r*0.18:-r*0.18), ey*r + r*0.15).stroke();
         });
-        break;
-      }
-      case 'Fly': {
-        // Compact body
-        g.ellipse(0, r*0.1, r*0.5, r*0.75).fill({ color });
-        g.circle(0, -r*0.55, r*0.38).fill({ color });
-        // Large wings
-        g.ellipse(-r*0.9, -r*0.2, r*0.65, r*0.28).fill({ color: 0xccddff, alpha: 0.55 });
-        g.ellipse( r*0.9, -r*0.2, r*0.65, r*0.28).fill({ color: 0xccddff, alpha: 0.55 });
-        // Compound eyes (big red)
-        g.circle(-r*0.22, -r*0.6, r*0.18).fill({ color: 0xdd2200 });
-        g.circle( r*0.22, -r*0.6, r*0.18).fill({ color: 0xdd2200 });
-        g.circle(-r*0.22, -r*0.6, r*0.09).fill({ color: 0xff4422 });
-        g.circle( r*0.22, -r*0.6, r*0.09).fill({ color: 0xff4422 });
-        break;
-      }
-      case 'Roach': {
-        // Wide armored oval
-        g.ellipse(0, 0, r*1.1, r*0.75).fill({ color });
-        // Armor segments
-        g.setStrokeStyle({ width: 1.5, color: dark, alpha: 0.7 });
-        g.moveTo(-r*0.8, -r*0.15).lineTo(r*0.8, -r*0.15).stroke();
-        g.moveTo(-r*0.8, r*0.15).lineTo(r*0.8, r*0.15).stroke();
+        // Abdomen (biggest)
+        g.ellipse(0, r*0.58, r*0.45, r*0.56).fill({ color });
+        g.setStrokeStyle({ width: 1.5, color: dark, alpha: 0.6 });
+        g.ellipse(0, r*0.58, r*0.45, r*0.56).stroke();
+        // Petiole (tiny waist)
+        g.ellipse(0, r*0.06, r*0.12, r*0.14).fill({ color: dark });
+        // Thorax
+        g.circle(0, -r*0.18, r*0.3).fill({ color });
         // Head
-        g.ellipse(0, -r*0.65, r*0.45, r*0.28).fill({ color });
-        // Antennae
-        g.setStrokeStyle({ width: 1, color: dark });
-        g.moveTo(-r*0.2, -r*0.8).lineTo(-r*0.7, -r*1.2).stroke();
-        g.moveTo( r*0.2, -r*0.8).lineTo( r*0.7, -r*1.2).stroke();
-        // Legs
-        g.setStrokeStyle({ width: 1.5, color: dark });
-        [-0.3, 0, 0.3].forEach(yo => {
-          g.moveTo(-r*1.1, yo*r).lineTo(-r*1.5, yo*r + r*0.25).stroke();
-          g.moveTo( r*1.1, yo*r).lineTo( r*1.5, yo*r + r*0.25).stroke();
-        });
-        break;
-      }
-      case 'Mosquito': {
-        // Slim body
-        g.ellipse(0, r*0.1, r*0.35, r*0.85).fill({ color });
-        g.circle(0, -r*0.65, r*0.28).fill({ color });
-        // Long proboscis
-        g.roundRect(-r*0.04, -r*0.95, r*0.08, r*0.55, 1).fill({ color: dark });
-        // Wings (translucent)
-        g.ellipse(-r*0.7, -r*0.15, r*0.55, r*0.22).fill({ color: 0xaaccff, alpha: 0.5 });
-        g.ellipse( r*0.7, -r*0.15, r*0.55, r*0.22).fill({ color: 0xaaccff, alpha: 0.5 });
-        // Eyes
-        g.circle(-r*0.16, -r*0.7, r*0.12).fill({ color: 0x880000 });
-        g.circle( r*0.16, -r*0.7, r*0.12).fill({ color: 0x880000 });
-        // Legs (thin)
-        g.setStrokeStyle({ width: 1, color: dark });
-        [-0.2, 0.2].forEach(yo => {
-          g.moveTo(-r*0.35, yo*r).lineTo(-r*0.9, yo*r + r*0.3).stroke();
-          g.moveTo( r*0.35, yo*r).lineTo( r*0.9, yo*r + r*0.3).stroke();
-        });
-        break;
-      }
-      case 'Beetle': {
-        // Shield-shaped elytra (wing covers)
-        g.ellipse(0, r*0.1, r*0.9, r*0.8).fill({ color });
-        // Center seam
-        g.setStrokeStyle({ width: 1.5, color: dark, alpha: 0.8 });
-        g.moveTo(0, -r*0.65).lineTo(0, r*0.85).stroke();
-        // Head
-        g.circle(0, -r*0.65, r*0.32).fill({ color });
-        // Spots (iridescent)
-        g.circle(-r*0.35, 0, r*0.16).fill({ color: adjustColor(color, 1.4), alpha: 0.6 });
-        g.circle( r*0.35, 0, r*0.16).fill({ color: adjustColor(color, 1.4), alpha: 0.6 });
-        // Legs
-        g.setStrokeStyle({ width: 1.5, color: dark });
-        [-0.2, 0.2, 0.6].forEach(yo => {
-          g.moveTo(-r*0.9, yo*r).lineTo(-r*1.4, yo*r + r*0.2).stroke();
-          g.moveTo( r*0.9, yo*r).lineTo( r*1.4, yo*r + r*0.2).stroke();
-        });
-        break;
-      }
-      case 'Wasp': {
-        // Segmented body — thorax + tapered abdomen
-        g.ellipse(0, -r*0.15, r*0.5, r*0.45).fill({ color });
-        g.ellipse(0, r*0.58, r*0.32, r*0.52).fill({ color: adjustColor(color, 0.85) });
-        // Black stripes on abdomen
-        g.setStrokeStyle({ width: 2.5, color: 0x221100, alpha: 0.7 });
-        g.moveTo(-r*0.3, r*0.35).lineTo(r*0.3, r*0.35).stroke();
-        g.moveTo(-r*0.28, r*0.58).lineTo(r*0.28, r*0.58).stroke();
-        // Head
-        g.circle(0, -r*0.62, r*0.3).fill({ color });
-        // Stinger
-        g.poly([r*0.04, r*1.08, -r*0.04, r*1.08, 0, r*1.32]).fill({ color: dark });
-        // Wings
-        g.ellipse(-r*0.75, -r*0.22, r*0.6, r*0.2).fill({ color: 0xccddff, alpha: 0.5 });
-        g.ellipse( r*0.75, -r*0.22, r*0.6, r*0.2).fill({ color: 0xccddff, alpha: 0.5 });
-        // Eyes
-        g.circle(-r*0.17, -r*0.68, r*0.12).fill({ color: 0x000000 });
-        g.circle( r*0.17, -r*0.68, r*0.12).fill({ color: 0x000000 });
-        break;
-      }
-      case 'Termite': {
-        // Chunky pale body
-        g.ellipse(0, r*0.15, r*0.7, r*0.85).fill({ color });
-        g.circle(0, -r*0.6, r*0.42).fill({ color });
+        g.circle(0, -r*0.58, r*0.36).fill({ color });
+        // Compound eyes
+        g.circle(-r*0.2, -r*0.63, r*0.12).fill({ color: 0x220000 });
+        g.circle( r*0.2, -r*0.63, r*0.12).fill({ color: 0x220000 });
+        g.circle(-r*0.2, -r*0.63, r*0.06).fill({ color: 0xff2222, alpha: 0.8 });
+        g.circle( r*0.2, -r*0.63, r*0.06).fill({ color: 0xff2222, alpha: 0.8 });
         // Mandibles
-        g.setStrokeStyle({ width: 2, color: dark });
-        g.moveTo(-r*0.3, -r*0.85).lineTo(-r*0.55, -r*1.15).stroke();
-        g.moveTo( r*0.3, -r*0.85).lineTo( r*0.55, -r*1.15).stroke();
-        // Warning glow (explosion)
-        g.circle(0, r*0.15, r*0.55).fill({ color: 0xff6600, alpha: 0.2 });
-        // Eyes
-        g.circle(-r*0.2, -r*0.62, r*0.13).fill({ color: 0xff8800 });
-        g.circle( r*0.2, -r*0.62, r*0.13).fill({ color: 0xff8800 });
+        g.setStrokeStyle({ width: 1.5, color: dark });
+        g.moveTo(-r*0.22, -r*0.82).lineTo(-r*0.38, -r*0.98).stroke();
+        g.moveTo( r*0.22, -r*0.82).lineTo( r*0.38, -r*0.98).stroke();
+        // Antennae (elbowed)
+        g.setStrokeStyle({ width: 1.2, color: dark });
+        g.moveTo(-r*0.15, -r*0.85).lineTo(-r*0.35, -r*1.18).stroke();
+        g.moveTo(-r*0.35, -r*1.18).lineTo(-r*0.22, -r*1.42).stroke();
+        g.moveTo( r*0.15, -r*0.85).lineTo( r*0.35, -r*1.18).stroke();
+        g.moveTo( r*0.35, -r*1.18).lineTo( r*0.22, -r*1.42).stroke();
+        g.circle(-r*0.22, -r*1.42, r*0.07).fill({ color: dark });
+        g.circle( r*0.22, -r*1.42, r*0.07).fill({ color: dark });
         break;
       }
+      /* ── FLY ─────────────────────────────────────────────────────── */
+      case 'Fly': {
+        // Wings (behind body, large + transparent)
+        g.ellipse(-r*1.0, -r*0.25, r*0.75, r*0.26).fill({ color: 0xddeeff, alpha: 0.5 });
+        g.ellipse( r*1.0, -r*0.25, r*0.75, r*0.26).fill({ color: 0xddeeff, alpha: 0.5 });
+        g.setStrokeStyle({ width: 0.8, color: 0x8899aa, alpha: 0.5 });
+        g.ellipse(-r*1.0, -r*0.25, r*0.75, r*0.26).stroke();
+        g.ellipse( r*1.0, -r*0.25, r*0.75, r*0.26).stroke();
+        // Vein lines on wings
+        g.setStrokeStyle({ width: 0.6, color: 0x6688aa, alpha: 0.4 });
+        g.moveTo(-r*0.42, -r*0.18).lineTo(-r*1.5, -r*0.28).stroke();
+        g.moveTo( r*0.42, -r*0.18).lineTo( r*1.5, -r*0.28).stroke();
+        // Abdomen (striped)
+        g.ellipse(0, r*0.28, r*0.45, r*0.6).fill({ color });
+        g.setStrokeStyle({ width: 2, color: 0x334422, alpha: 0.55 });
+        [-0.05, 0.18, 0.4].forEach(y => {
+          g.moveTo(-r*0.42, r*y).lineTo(r*0.42, r*y).stroke();
+        });
+        // Thorax
+        g.ellipse(0, -r*0.22, r*0.42, r*0.38).fill({ color: adjustColor(color, 0.85) });
+        // Big round head
+        g.circle(0, -r*0.68, r*0.38).fill({ color });
+        // Huge compound eyes
+        g.ellipse(-r*0.28, -r*0.7, r*0.25, r*0.22).fill({ color: 0xcc1100 });
+        g.ellipse( r*0.28, -r*0.7, r*0.25, r*0.22).fill({ color: 0xcc1100 });
+        // Facets
+        g.setStrokeStyle({ width: 0.8, color: 0x440000, alpha: 0.6 });
+        [-0.5, 0, 0.5].forEach(a => {
+          const rad = a * Math.PI/6;
+          g.moveTo(-r*0.28 + Math.cos(rad)*r*0.12, -r*0.7 + Math.sin(rad)*r*0.1)
+           .lineTo(-r*0.28 + Math.cos(rad)*r*0.22, -r*0.7 + Math.sin(rad)*r*0.18).stroke();
+          g.moveTo( r*0.28 + Math.cos(rad)*r*0.12, -r*0.7 + Math.sin(rad)*r*0.1)
+           .lineTo( r*0.28 + Math.cos(rad)*r*0.22, -r*0.7 + Math.sin(rad)*r*0.18).stroke();
+        });
+        // Proboscis
+        g.roundRect(-r*0.04, -r*0.52, r*0.08, r*0.22, 1).fill({ color: dark });
+        // 6 spindly legs
+        g.setStrokeStyle({ width: 1, color: dark });
+        [[-r*0.4, 0.02], [-r*0.44, 0.18], [-r*0.38, 0.38]].forEach(([sx, sy]) => {
+          g.moveTo(sx, r*sy).lineTo(sx - r*0.35, r*sy + r*0.32).stroke();
+          g.moveTo(-sx, r*sy).lineTo(-sx + r*0.35, r*sy + r*0.32).stroke();
+        });
+        break;
+      }
+      /* ── ROACH ───────────────────────────────────────────────────── */
+      case 'Roach': {
+        // Legs (behind)
+        g.setStrokeStyle({ width: 1.5, color: dark });
+        [[-r*1.05, -r*0.28], [-r*1.12, r*0.0], [-r*0.98, r*0.28]].forEach(([ex, ey]) => {
+          g.moveTo(ex > 0 ? r*0.75 : -r*0.75, ey).lineTo(ex, ey).stroke();
+          g.moveTo(ex, ey).lineTo(ex + (ex > 0 ? r*0.32 : -r*0.32), ey + r*0.22).stroke();
+          g.moveTo(-ex > 0 ? r*0.75 : -r*0.75, ey).lineTo(-ex, ey).stroke();
+          g.moveTo(-ex, ey).lineTo(-ex + (-ex > 0 ? r*0.32 : -r*0.32), ey + r*0.22).stroke();
+        });
+        // Main body (wide, flat, armored)
+        g.ellipse(0, r*0.08, r*1.05, r*0.82).fill({ color });
+        // Pronotum (shield over thorax)
+        g.ellipse(0, -r*0.42, r*0.72, r*0.48).fill({ color: adjustColor(color, 1.15) });
+        g.setStrokeStyle({ width: 1.2, color: dark, alpha: 0.6 });
+        g.ellipse(0, -r*0.42, r*0.72, r*0.48).stroke();
+        // Armor segments on abdomen
+        g.setStrokeStyle({ width: 1.2, color: dark, alpha: 0.45 });
+        [-r*0.05, r*0.2, r*0.45].forEach(y => {
+          g.moveTo(-r*0.9, y).lineTo(r*0.9, y).stroke();
+        });
+        // Head
+        g.ellipse(0, -r*0.82, r*0.38, r*0.24).fill({ color: adjustColor(color, 0.8) });
+        // Long antennae
+        g.setStrokeStyle({ width: 1, color: dark });
+        g.moveTo(-r*0.2, -r*0.95).lineTo(-r*0.65, -r*1.4).stroke();
+        g.moveTo( r*0.2, -r*0.95).lineTo( r*0.65, -r*1.4).stroke();
+        // Eyes
+        g.circle(-r*0.25, -r*0.86, r*0.1).fill({ color: 0x000000 });
+        g.circle( r*0.25, -r*0.86, r*0.1).fill({ color: 0x000000 });
+        // Shine on pronotum
+        g.ellipse(-r*0.18, -r*0.55, r*0.22, r*0.12).fill({ color: 0xffffff, alpha: 0.12 });
+        break;
+      }
+      /* ── MOSQUITO ────────────────────────────────────────────────── */
+      case 'Mosquito': {
+        // Slim wings
+        g.ellipse(-r*0.82, -r*0.3, r*0.6, r*0.18).fill({ color: 0xbbccdd, alpha: 0.45 });
+        g.ellipse( r*0.82, -r*0.3, r*0.6, r*0.18).fill({ color: 0xbbccdd, alpha: 0.45 });
+        // Thin tapered abdomen
+        g.ellipse(0, r*0.38, r*0.28, r*0.72).fill({ color });
+        // Thorax hump
+        g.ellipse(0, -r*0.12, r*0.38, r*0.35).fill({ color });
+        // Head
+        g.circle(0, -r*0.55, r*0.26).fill({ color });
+        // Long proboscis
+        g.roundRect(-r*0.04, -r*0.72, r*0.08, r*0.62, 1).fill({ color: dark });
+        g.circle(0, -r*1.26, r*0.05).fill({ color: dark });
+        // Eyes (red)
+        g.circle(-r*0.16, -r*0.6, r*0.12).fill({ color: 0x880000 });
+        g.circle( r*0.16, -r*0.6, r*0.12).fill({ color: 0x880000 });
+        g.circle(-r*0.16, -r*0.6, r*0.06).fill({ color: 0xdd2222, alpha: 0.7 });
+        g.circle( r*0.16, -r*0.6, r*0.06).fill({ color: 0xdd2222, alpha: 0.7 });
+        // Antennae (feathery)
+        g.setStrokeStyle({ width: 1, color: dark });
+        g.moveTo(-r*0.1, -r*0.72).lineTo(-r*0.3, -r*1.05).stroke();
+        g.moveTo( r*0.1, -r*0.72).lineTo( r*0.3, -r*1.05).stroke();
+        // Long thin legs
+        g.setStrokeStyle({ width: 0.9, color: dark });
+        [[-r*0.32, -r*0.1, -r*0.85, -r*0.2], [-r*0.36, r*0.1, -r*0.92, r*0.12],
+         [-r*0.3, r*0.3, -r*0.78, r*0.55], [ r*0.32, -r*0.1, r*0.85, -r*0.2],
+         [ r*0.36, r*0.1, r*0.92, r*0.12], [ r*0.3, r*0.3, r*0.78, r*0.55]].forEach(([sx,sy,ex,ey]) => {
+          g.moveTo(sx, sy).lineTo(ex, ey).stroke();
+        });
+        break;
+      }
+      /* ── BEETLE ──────────────────────────────────────────────────── */
+      case 'Beetle': {
+        // Legs
+        g.setStrokeStyle({ width: 1.5, color: dark });
+        [[-r*1.0, -r*0.18], [-r*1.08, r*0.08], [-r*0.95, r*0.35]].forEach(([ex, ey]) => {
+          g.moveTo(-r*0.75, ey).lineTo(ex, ey).stroke();
+          g.moveTo(ex, ey).lineTo(ex - r*0.25, ey + r*0.2).stroke();
+          g.moveTo( r*0.75, ey).lineTo(-ex, ey).stroke();
+          g.moveTo(-ex, ey).lineTo(-ex + r*0.25, ey + r*0.2).stroke();
+        });
+        // Rounded shield body (elytra)
+        g.ellipse(0, r*0.12, r*0.82, r*0.88).fill({ color });
+        // Elytra center seam
+        g.setStrokeStyle({ width: 1.5, color: dark, alpha: 0.7 });
+        g.moveTo(0, -r*0.7).lineTo(0, r*0.95).stroke();
+        // Iridescent spots
+        g.circle(-r*0.3, r*0.05, r*0.18).fill({ color: light, alpha: 0.55 });
+        g.circle( r*0.3, r*0.05, r*0.18).fill({ color: light, alpha: 0.55 });
+        g.circle(-r*0.28, r*0.5, r*0.14).fill({ color: light, alpha: 0.4 });
+        g.circle( r*0.28, r*0.5, r*0.14).fill({ color: light, alpha: 0.4 });
+        // Pronotum
+        g.ellipse(0, -r*0.58, r*0.55, r*0.38).fill({ color: adjustColor(color, 1.2) });
+        // Head
+        g.circle(0, -r*0.85, r*0.3).fill({ color: adjustColor(color, 0.85) });
+        // Short antennae
+        g.setStrokeStyle({ width: 1.2, color: dark });
+        g.moveTo(-r*0.16, -r*1.02).lineTo(-r*0.35, -r*1.28).stroke();
+        g.moveTo( r*0.16, -r*1.02).lineTo( r*0.35, -r*1.28).stroke();
+        // Eyes
+        g.circle(-r*0.2, -r*0.9, r*0.1).fill({ color: 0x000000 });
+        g.circle( r*0.2, -r*0.9, r*0.1).fill({ color: 0x000000 });
+        // Overall shine
+        g.ellipse(-r*0.22, -r*0.12, r*0.28, r*0.16).fill({ color: 0xffffff, alpha: 0.15 });
+        break;
+      }
+      /* ── WASP ────────────────────────────────────────────────────── */
+      case 'Wasp': {
+        // Transparent wings
+        g.ellipse(-r*0.88, -r*0.28, r*0.68, r*0.22).fill({ color: 0xeeeeff, alpha: 0.48 });
+        g.ellipse( r*0.88, -r*0.28, r*0.68, r*0.22).fill({ color: 0xeeeeff, alpha: 0.48 });
+        g.ellipse(-r*0.82, -r*0.08, r*0.52, r*0.15).fill({ color: 0xdddeff, alpha: 0.35 });
+        g.ellipse( r*0.82, -r*0.08, r*0.52, r*0.15).fill({ color: 0xdddeff, alpha: 0.35 });
+        g.setStrokeStyle({ width: 0.7, color: 0x8888aa, alpha: 0.4 });
+        g.ellipse(-r*0.88, -r*0.28, r*0.68, r*0.22).stroke();
+        g.ellipse( r*0.88, -r*0.28, r*0.68, r*0.22).stroke();
+        // Tapered striped abdomen
+        g.ellipse(0, r*0.62, r*0.35, r*0.58).fill({ color });
+        // Black stripes
+        g.setStrokeStyle({ width: 3, color: 0x111100, alpha: 0.75 });
+        [r*0.3, r*0.54, r*0.78].forEach(y => {
+          g.moveTo(-r*0.32, y).lineTo(r*0.32, y).stroke();
+        });
+        // Narrow waist (petiole)
+        g.ellipse(0, r*0.1, r*0.14, r*0.16).fill({ color: 0x221100 });
+        // Thorax
+        g.ellipse(0, -r*0.18, r*0.46, r*0.38).fill({ color: adjustColor(color, 0.9) });
+        // Head
+        g.circle(0, -r*0.65, r*0.34).fill({ color });
+        // Large eyes
+        g.ellipse(-r*0.22, -r*0.68, r*0.18, r*0.22).fill({ color: 0x1a1100 });
+        g.ellipse( r*0.22, -r*0.68, r*0.18, r*0.22).fill({ color: 0x1a1100 });
+        // Short antennae
+        g.setStrokeStyle({ width: 1.5, color: dark });
+        g.moveTo(-r*0.12, -r*0.88).lineTo(-r*0.28, -r*1.18).stroke();
+        g.moveTo( r*0.12, -r*0.88).lineTo( r*0.28, -r*1.18).stroke();
+        g.circle(-r*0.28, -r*1.18, r*0.06).fill({ color: dark });
+        g.circle( r*0.28, -r*1.18, r*0.06).fill({ color: dark });
+        // Stinger
+        g.poly([-r*0.06, r*1.18, r*0.06, r*1.18, 0, r*1.42]).fill({ color: dark });
+        // Legs
+        g.setStrokeStyle({ width: 1.2, color: dark });
+        [[-r*0.42, -r*0.1], [-r*0.46, r*0.08], [-r*0.38, r*0.28]].forEach(([ex, ey]) => {
+          g.moveTo(-r*0.4, ey).lineTo(ex, ey).stroke();
+          g.moveTo(ex, ey).lineTo(ex - r*0.28, ey + r*0.3).stroke();
+          g.moveTo( r*0.4, ey).lineTo(-ex, ey).stroke();
+          g.moveTo(-ex, ey).lineTo(-ex + r*0.28, ey + r*0.3).stroke();
+        });
+        break;
+      }
+      /* ── TERMITE ─────────────────────────────────────────────────── */
+      case 'Termite': {
+        // Explosion warning aura
+        g.circle(0, r*0.2, r*0.72).fill({ color: 0xff6600, alpha: 0.15 });
+        // Soft pale abdomen
+        g.ellipse(0, r*0.25, r*0.65, r*0.82).fill({ color });
+        // Thorax
+        g.circle(0, -r*0.28, r*0.4).fill({ color });
+        // Large head with mandibles
+        g.circle(0, -r*0.72, r*0.46).fill({ color: adjustColor(color, 1.1) });
+        // Big mandibles
+        g.setStrokeStyle({ width: 3, color: adjustColor(color, 0.6) });
+        g.moveTo(-r*0.28, -r*0.98).lineTo(-r*0.58, -r*1.28).stroke();
+        g.moveTo(-r*0.58, -r*1.28).lineTo(-r*0.42, -r*1.12).stroke();
+        g.moveTo( r*0.28, -r*0.98).lineTo( r*0.58, -r*1.28).stroke();
+        g.moveTo( r*0.58, -r*1.28).lineTo( r*0.42, -r*1.12).stroke();
+        // Eyes (orange glow)
+        g.circle(-r*0.22, -r*0.76, r*0.14).fill({ color: 0xff8800 });
+        g.circle( r*0.22, -r*0.76, r*0.14).fill({ color: 0xff8800 });
+        g.circle(-r*0.22, -r*0.76, r*0.07).fill({ color: 0xffcc44 });
+        g.circle( r*0.22, -r*0.76, r*0.07).fill({ color: 0xffcc44 });
+        // Short antennae
+        g.setStrokeStyle({ width: 1.2, color: dark });
+        g.moveTo(-r*0.15, -r*1.05).lineTo(-r*0.28, -r*1.35).stroke();
+        g.moveTo( r*0.15, -r*1.05).lineTo( r*0.28, -r*1.35).stroke();
+        // Stubby legs
+        g.setStrokeStyle({ width: 1.5, color: dark });
+        [r*-0.12, r*0.1, r*0.35].forEach(ey => {
+          g.moveTo(-r*0.6, ey).lineTo(-r*1.0, ey + r*0.18).stroke();
+          g.moveTo( r*0.6, ey).lineTo( r*1.0, ey + r*0.18).stroke();
+        });
+        break;
+      }
+      /* ── FIRE ANT (mid-boss) ─────────────────────────────────────── */
       case 'FireAnt': {
-        // Mid-boss: large fire ant with glow
-        g.circle(0, r*0.35, r*0.65).fill({ color: 0xdd3300 }); // abdomen
-        g.circle(0, -r*0.1, r*0.5).fill({ color });            // thorax
-        g.circle(0, -r*0.72, r*0.48).fill({ color });          // head
         // Fire aura
-        for (let i = 0; i < 6; i++) {
-          const a = (Math.PI*2*i)/6;
-          g.circle(Math.cos(a)*r*1.0, r*0.35 + Math.sin(a)*r*0.65, r*0.18).fill({ color: 0xff8800, alpha: 0.5 });
+        for (let i = 0; i < 8; i++) {
+          const a = (Math.PI*2*i)/8 + 0.2;
+          g.ellipse(Math.cos(a)*r*0.95, r*0.4 + Math.sin(a)*r*0.7, r*0.22, r*0.14).fill({ color: 0xff6600, alpha: 0.4 });
         }
-        // Antennae (thicker)
-        g.setStrokeStyle({ width: 2, color: 0xaa2200 });
-        g.moveTo(-r*0.18, -r*1.05).lineTo(-r*0.55, -r*1.5).stroke();
-        g.moveTo( r*0.18, -r*1.05).lineTo( r*0.55, -r*1.5).stroke();
-        g.circle(-r*0.55, -r*1.5, r*0.12).fill({ color: 0xff4400 });
-        g.circle( r*0.55, -r*1.5, r*0.12).fill({ color: 0xff4400 });
-        // Big eyes
-        g.circle(-r*0.24, -r*0.78, r*0.16).fill({ color: 0xff0000 });
-        g.circle( r*0.24, -r*0.78, r*0.16).fill({ color: 0xff0000 });
-        g.circle(-r*0.24, -r*0.78, r*0.08).fill({ color: 0xffffff });
-        g.circle( r*0.24, -r*0.78, r*0.08).fill({ color: 0xffffff });
-        // Legs (heavy)
-        g.setStrokeStyle({ width: 2, color: 0xaa2200 });
-        [-0.4, 0, 0.4].forEach(yo => {
-          g.moveTo(-r*0.5, yo*r).lineTo(-r*1.1, yo*r + r*0.25).stroke();
-          g.moveTo( r*0.5, yo*r).lineTo( r*1.1, yo*r + r*0.25).stroke();
+        // Heavy legs
+        g.setStrokeStyle({ width: 2, color: 0x881100 });
+        [[-r*0.55, -r*0.12], [-r*0.6, r*0.12], [-r*0.52, r*0.38]].forEach(([ex, ey]) => {
+          g.moveTo(ex > 0 ? r*0.45 : -r*0.45, ey).lineTo(ex, ey).stroke();
+          g.moveTo(ex, ey).lineTo(ex + (ex > 0 ? r*0.32 : -r*0.32), ey + r*0.28).stroke();
+          g.moveTo(-ex > 0 ? r*0.45 : -r*0.45, ey).lineTo(-ex, ey).stroke();
+          g.moveTo(-ex, ey).lineTo(-ex + (-ex > 0 ? r*0.32 : -r*0.32), ey + r*0.28).stroke();
         });
+        // Abdomen (glowing)
+        g.ellipse(0, r*0.55, r*0.58, r*0.65).fill({ color: 0xcc2200 });
+        g.ellipse(0, r*0.55, r*0.44, r*0.5).fill({ color: 0xff4400, alpha: 0.7 });
+        // Waist
+        g.ellipse(0, r*0.05, r*0.16, r*0.18).fill({ color: 0x881100 });
+        // Thorax
+        g.circle(0, -r*0.18, r*0.42).fill({ color });
+        // Head
+        g.circle(0, -r*0.72, r*0.52).fill({ color });
+        // Eyes (glowing red)
+        g.circle(-r*0.26, -r*0.78, r*0.18).fill({ color: 0xff0000 });
+        g.circle( r*0.26, -r*0.78, r*0.18).fill({ color: 0xff0000 });
+        g.circle(-r*0.26, -r*0.78, r*0.09).fill({ color: 0xffffff });
+        g.circle( r*0.26, -r*0.78, r*0.09).fill({ color: 0xffffff });
+        // Mandibles (big)
+        g.setStrokeStyle({ width: 2.5, color: 0x881100 });
+        g.moveTo(-r*0.3, -r*1.05).lineTo(-r*0.58, -r*1.35).stroke();
+        g.moveTo( r*0.3, -r*1.05).lineTo( r*0.58, -r*1.35).stroke();
+        // Antennae
+        g.setStrokeStyle({ width: 2, color: 0x881100 });
+        g.moveTo(-r*0.18, -r*1.1).lineTo(-r*0.42, -r*1.55).stroke();
+        g.moveTo(-r*0.42, -r*1.55).lineTo(-r*0.28, -r*1.82).stroke();
+        g.moveTo( r*0.18, -r*1.1).lineTo( r*0.42, -r*1.55).stroke();
+        g.moveTo( r*0.42, -r*1.55).lineTo( r*0.28, -r*1.82).stroke();
+        g.circle(-r*0.28, -r*1.82, r*0.1).fill({ color: 0xff4400 });
+        g.circle( r*0.28, -r*1.82, r*0.1).fill({ color: 0xff4400 });
         break;
       }
+      /* ── QUEEN ANT (final boss) ──────────────────────────────────── */
       case 'QueenAnt': {
-        // Final boss: huge queen ant with crown
-        g.ellipse(0, r*0.5, r*0.8, r*0.72).fill({ color: 0xcc1100 }); // abdomen
-        g.circle(0, -r*0.15, r*0.6).fill({ color });                   // thorax
-        g.circle(0, -r*0.88, r*0.56).fill({ color });                  // head
-        // Abdomen pattern
-        g.setStrokeStyle({ width: 2.5, color: 0x880000, alpha: 0.7 });
-        g.moveTo(-r*0.7, r*0.45).lineTo(r*0.7, r*0.45).stroke();
-        g.moveTo(-r*0.65, r*0.7).lineTo(r*0.65, r*0.7).stroke();
-        // Crown
-        const crownY = -r*1.4;
-        g.poly([-r*0.4, crownY+r*0.25, r*0.4, crownY+r*0.25, r*0.35, crownY, r*0.15, crownY+r*0.15, 0, crownY-r*0.1, -r*0.15, crownY+r*0.15, -r*0.35, crownY]).fill({ color: 0xffd700 });
-        // Crown jewels
-        g.circle(0, crownY-r*0.05, r*0.09).fill({ color: 0xff2222 });
-        g.circle(-r*0.25, crownY+r*0.1, r*0.07).fill({ color: 0x4444ff });
-        g.circle( r*0.25, crownY+r*0.1, r*0.07).fill({ color: 0x44ff44 });
-        // Wings (large)
-        g.ellipse(-r*1.05, -r*0.2, r*0.75, r*0.3).fill({ color: 0xaabbff, alpha: 0.45 });
-        g.ellipse( r*1.05, -r*0.2, r*0.75, r*0.3).fill({ color: 0xaabbff, alpha: 0.45 });
-        // Antennae
-        g.setStrokeStyle({ width: 2.5, color: 0x880000 });
-        g.moveTo(-r*0.22, -r*1.28).lineTo(-r*0.65, -r*1.75).stroke();
-        g.moveTo( r*0.22, -r*1.28).lineTo( r*0.65, -r*1.75).stroke();
-        g.circle(-r*0.65, -r*1.75, r*0.14).fill({ color: 0xff2222 });
-        g.circle( r*0.65, -r*1.75, r*0.14).fill({ color: 0xff2222 });
-        // Eyes
-        g.circle(-r*0.28, -r*0.96, r*0.18).fill({ color: 0xff0000 });
-        g.circle( r*0.28, -r*0.96, r*0.18).fill({ color: 0xff0000 });
-        g.circle(-r*0.28, -r*0.96, r*0.09).fill({ color: 0xffaaaa });
-        g.circle( r*0.28, -r*0.96, r*0.09).fill({ color: 0xffaaaa });
+        // Crown (drawn first, behind head)
+        const cy = -r*1.55;
+        g.poly([-r*0.46, cy+r*0.3, r*0.46, cy+r*0.3, r*0.42, cy, r*0.22, cy+r*0.18,
+                0, cy-r*0.16, -r*0.22, cy+r*0.18, -r*0.42, cy]).fill({ color: 0xffd700 });
+        g.circle(0, cy-r*0.14, r*0.1).fill({ color: 0xff2222 });
+        g.circle(-r*0.3, cy+r*0.12, r*0.08).fill({ color: 0x4444ff });
+        g.circle( r*0.3, cy+r*0.12, r*0.08).fill({ color: 0x44ff44 });
+        g.setStrokeStyle({ width: 1.5, color: 0xcc9900 });
+        g.poly([-r*0.46, cy+r*0.3, r*0.46, cy+r*0.3, r*0.42, cy, r*0.22, cy+r*0.18,
+                0, cy-r*0.16, -r*0.22, cy+r*0.18, -r*0.42, cy]).stroke();
+
+        // Large wings
+        g.ellipse(-r*1.12, -r*0.28, r*0.82, r*0.3).fill({ color: 0xaabbff, alpha: 0.42 });
+        g.ellipse( r*1.12, -r*0.28, r*0.82, r*0.3).fill({ color: 0xaabbff, alpha: 0.42 });
+        g.ellipse(-r*1.0, r*0.02, r*0.62, r*0.2).fill({ color: 0xaabbff, alpha: 0.3 });
+        g.ellipse( r*1.0, r*0.02, r*0.62, r*0.2).fill({ color: 0xaabbff, alpha: 0.3 });
+        g.setStrokeStyle({ width: 0.8, color: 0x6677cc, alpha: 0.4 });
+        g.ellipse(-r*1.12, -r*0.28, r*0.82, r*0.3).stroke();
+        g.ellipse( r*1.12, -r*0.28, r*0.82, r*0.3).stroke();
+
         // Heavy legs
-        g.setStrokeStyle({ width: 2.5, color: 0x880000 });
-        [-0.5, 0, 0.5].forEach(yo => {
-          g.moveTo(-r*0.6, yo*r).lineTo(-r*1.3, yo*r + r*0.3).stroke();
-          g.moveTo( r*0.6, yo*r).lineTo( r*1.3, yo*r + r*0.3).stroke();
+        g.setStrokeStyle({ width: 2.5, color: 0x770000 });
+        [[-r*0.65, -r*0.18], [-r*0.72, r*0.1], [-r*0.62, r*0.42]].forEach(([ex, ey]) => {
+          g.moveTo(-r*0.55, ey).lineTo(ex, ey).stroke();
+          g.moveTo(ex, ey).lineTo(ex - r*0.38, ey + r*0.35).stroke();
+          g.moveTo( r*0.55, ey).lineTo(-ex, ey).stroke();
+          g.moveTo(-ex, ey).lineTo(-ex + r*0.38, ey + r*0.35).stroke();
         });
+
+        // Large abdomen with pattern
+        g.ellipse(0, r*0.6, r*0.88, r*0.78).fill({ color: 0xcc1100 });
+        g.setStrokeStyle({ width: 2.5, color: 0x880000, alpha: 0.6 });
+        [r*0.35, r*0.6, r*0.85].forEach(y => {
+          g.moveTo(-r*0.8, y).lineTo(r*0.8, y).stroke();
+        });
+        // Abdomen shine
+        g.ellipse(-r*0.3, r*0.3, r*0.35, r*0.2).fill({ color: 0xff3322, alpha: 0.35 });
+
+        // Waist
+        g.ellipse(0, r*0.05, r*0.18, r*0.2).fill({ color: 0x880000 });
+        // Thorax
+        g.circle(0, -r*0.2, r*0.52).fill({ color });
+        // Large head
+        g.circle(0, -r*0.85, r*0.62).fill({ color });
+        // Glowing eyes
+        g.circle(-r*0.3, -r*0.92, r*0.2).fill({ color: 0xff0000 });
+        g.circle( r*0.3, -r*0.92, r*0.2).fill({ color: 0xff0000 });
+        g.circle(-r*0.3, -r*0.92, r*0.1).fill({ color: 0xffffff });
+        g.circle( r*0.3, -r*0.92, r*0.1).fill({ color: 0xffffff });
+        // Mandibles
+        g.setStrokeStyle({ width: 3, color: 0x880000 });
+        g.moveTo(-r*0.35, -r*1.22).lineTo(-r*0.65, -r*1.52).stroke();
+        g.moveTo(-r*0.65, -r*1.52).lineTo(-r*0.48, -r*1.35).stroke();
+        g.moveTo( r*0.35, -r*1.22).lineTo( r*0.65, -r*1.52).stroke();
+        g.moveTo( r*0.65, -r*1.52).lineTo( r*0.48, -r*1.35).stroke();
+        // Elbowed antennae
+        g.setStrokeStyle({ width: 2.5, color: 0x880000 });
+        g.moveTo(-r*0.25, -r*1.32).lineTo(-r*0.58, -r*1.82).stroke();
+        g.moveTo(-r*0.58, -r*1.82).lineTo(-r*0.38, -r*2.1).stroke();
+        g.moveTo( r*0.25, -r*1.32).lineTo( r*0.58, -r*1.82).stroke();
+        g.moveTo( r*0.58, -r*1.82).lineTo( r*0.38, -r*2.1).stroke();
+        g.circle(-r*0.38, -r*2.1, r*0.14).fill({ color: 0xff2222 });
+        g.circle( r*0.38, -r*2.1, r*0.14).fill({ color: 0xff2222 });
         break;
       }
       default:
         g.circle(0, 0, r).fill({ color });
     }
 
-    // Common shine
-    g.circle(-r*0.3, -r*0.3, r*0.2).fill({ color: 0xffffff, alpha: 0.18 });
-    // Thicker cartoon outline (2px)
-    g.setStrokeStyle({ width: 2, color: 0x000000, alpha: 0.5 });
+    // Highlight (all types)
+    g.circle(-r*0.32, -r*0.32, r*0.18).fill({ color: 0xffffff, alpha: 0.15 });
+    // Cartoon outline
+    g.setStrokeStyle({ width: 1.8, color: 0x000000, alpha: 0.45 });
     g.circle(0, 0, r).stroke();
   }
 

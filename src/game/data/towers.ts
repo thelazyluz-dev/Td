@@ -55,7 +55,7 @@ export const TOWER_DEFS: Record<string, TowerDef> = {
     type: 'GlueTrap',
     cost: 40,
     dps: 0,
-    range: 0,
+    range: 70,
     fireRate: 0,
     projectileSpeed: 0,
   },
