@@ -93,7 +93,7 @@ export function HUD() {
   const {
     state, selectedTower, selectedUpgradeTowerId,
     selectTower, skipBuild, sendNextWave, airStrike, empBlast,
-    selectForUpgrade, upgradeTower, sellTower, setSpeed, initEngine,
+    selectForUpgrade, upgradeTower, sellTower, setSpeed, initEngine, togglePause,
   } = useGameStore();
 
   const [confirmRestart, setConfirmRestart] = useState(false);
@@ -264,6 +264,22 @@ export function HUD() {
               </button>
             )}
             {inWave && (
+              <button
+                onPointerDown={() => togglePause()}
+                style={{
+                  background: state.isPaused ? 'rgba(80,180,80,0.85)' : 'rgba(60,60,60,0.7)',
+                  border: `1px solid ${state.isPaused ? '#44cc44' : 'rgba(255,255,255,0.15)'}`,
+                  color: state.isPaused ? '#ccffcc' : 'rgba(255,255,255,0.6)',
+                  borderRadius: 6, fontSize: 15, fontWeight: 800,
+                  width: 36, height: 36, cursor: 'pointer',
+                  WebkitTapHighlightColor: 'transparent',
+                  boxShadow: state.isPaused ? '0 0 8px rgba(80,200,80,0.5)' : 'none',
+                }}
+              >
+                {state.isPaused ? '▶' : '⏸'}
+              </button>
+            )}
+            {inWave && !state.isPaused && (
               <button
                 onPointerDown={() => setSpeed(state.speed === 2 ? 1 : 2)}
                 style={{

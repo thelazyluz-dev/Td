@@ -20,6 +20,7 @@ interface GameStore {
   upgradeTower: (id: number) => void;
   sellTower: (id: number) => void;
   setSpeed: (mult: number) => void;
+  togglePause: () => void;
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -94,5 +95,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   setSpeed(mult) {
     get().engine?.setSpeed(mult);
+  },
+
+  togglePause() {
+    get().engine?.togglePause();
   },
 }));

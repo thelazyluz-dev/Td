@@ -672,15 +672,9 @@ export class Renderer {
     }
   }
 
-  private makeTower(type: string, range: number): TowerSprite {
+  private makeTower(type: string, _range: number): TowerSprite {
     const color = TC[type] ?? 0xaaaaaa;
     const cont  = new Container();
-
-    // Range ring
-    const ring = new Graphics();
-    ring.setStrokeStyle({ width: 1, color: 0xffffff, alpha: 0.08 });
-    ring.circle(0, 0, range).stroke();
-    cont.addChild(ring);
 
     // Drop shadow
     const shadow = new Graphics();
@@ -1378,9 +1372,6 @@ export class Renderer {
 
     // Highlight (all types)
     g.circle(-r*0.32, -r*0.32, r*0.18).fill({ color: 0xffffff, alpha: 0.15 });
-    // Cartoon outline
-    g.setStrokeStyle({ width: 1.8, color: 0x000000, alpha: 0.45 });
-    g.circle(0, 0, r).stroke();
   }
 
   // ── PROJECTILES ──────────────────────────────────────────────────────────

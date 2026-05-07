@@ -26,6 +26,7 @@ export interface GameState {
   earlyWaveBonus: number;
   speed: number;
   lastPerfectBonus: number;
+  isPaused: boolean;
 }
 
 type StateListener = (state: GameState) => void;
@@ -52,6 +53,7 @@ export class GameEngine {
   private regenTimer = 0;
   private baseDamagedThisWave = false;
   private lastPerfectBonus = 0;
+  private isPaused = false;
   private regenHPPerThirty = 0;
   private lastTs: number | null = null;
   private rafId: number | null = null;
@@ -93,6 +95,7 @@ export class GameEngine {
       earlyWaveBonus: this.earlyWaveBonusAmount(),
       speed: this.speedMult,
       lastPerfectBonus: this.lastPerfectBonus,
+      isPaused: this.isPaused,
     };
   }
 
@@ -133,6 +136,25 @@ export class GameEngine {
   }
 
   setSpeed(mult: number) { this.speedMult = mult; this.emit(); }
+
+  pause(): void {
+    if (this.isPaused || this.phase === 'gameover') return;
+    this.isPaused = true;
+    if (this.rafId !== null) { cancelAnimationFrame(this.rafId); this.rafId = null; }
+    this.emit();
+  }
+
+  resume(): void {
+    if (!this.isPaused) return;
+    this.isPaused = false;
+    this.lastTs = null;
+    this.rafId = requestAnimationFrame(this.loop);
+    this.emit();
+  }
+
+  togglePause(): void {
+    if (this.isPaused) this.resume(); else this.pause();
+  }
 
   private tickBuild(_dt: number) {
     // Build phase: player presses Ready to start
