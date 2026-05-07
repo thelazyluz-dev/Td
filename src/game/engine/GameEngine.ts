@@ -208,7 +208,7 @@ export class GameEngine {
 
   upgradeTower(towerId: number): boolean {
     const tower = this.towers.find(t => t.id === towerId);
-    if (!tower || tower.upgrades >= 3) return false;
+    if (!tower) return false;
     const cost = tower.upgradeCost;
     if (!this.economySystem.spend(cost)) return false;
     tower.totalSpent += cost;

@@ -44,8 +44,9 @@ export class Tower {
   get effectiveFireRate() { return this.fireRate * this.fireRateMultiplier; }
 
   get upgradeCost(): number {
-    if (this.upgrades >= 3) return 0;
-    const multipliers = [1.5, 2.0, 3.0];
-    return Math.round(this.baseCost * multipliers[this.upgrades]);
+    const base = [1.5, 2.0, 3.0];
+    if (this.upgrades < base.length) return Math.round(this.baseCost * base[this.upgrades]);
+    // Exponential scaling for levels 3+
+    return Math.round(this.baseCost * (3.0 + (this.upgrades - 2) * 1.8));
   }
 }

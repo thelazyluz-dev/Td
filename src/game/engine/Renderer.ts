@@ -57,6 +57,7 @@ interface EnemySprite {
   bobTimer: number;
   isDying: boolean;
   deathTimer: number;
+  spawnTimer: number;
 }
 
 interface TowerSprite {
@@ -72,6 +73,7 @@ interface TowerSprite {
   starsContainer: Container;
   selRing: Graphics;
   selTime: number;
+  glow: Graphics;
 }
 
 interface Trail {
@@ -134,6 +136,11 @@ export class Renderer {
   private onEmptyTap: (() => void) | null = null;
   private _placementMode = false;
 
+  // Base damage flash
+  private prevBaseHp = -1;
+  private baseFlashTimer = 0;
+  private baseFlashOverlay: Graphics | null = null;
+
   // Wave banner
   private banner: Text | null = null;
   private bannerSub: Text | null = null;
@@ -164,6 +171,13 @@ export class Renderer {
     );
 
     this.drawPath();
+
+    // Base-hit red vignette overlay
+    const flashOverlay = new Graphics();
+    flashOverlay.rect(0, 0, CANVAS_W, CANVAS_H).fill({ color: 0xff0000, alpha: 1 });
+    flashOverlay.alpha = 0;
+    this.uiLayer.addChild(flashOverlay);
+    this.baseFlashOverlay = flashOverlay;
 
     // Stage background tap → deselect tower (only when not in placement mode)
     this.app.stage.eventMode = 'static';
@@ -399,6 +413,8 @@ export class Renderer {
 
   update(state: GameState, dt: number): void {
     if (!this.app) return;
+    if (this.prevBaseHp > 0 && state.baseHp < this.prevBaseHp) this.baseFlashTimer = 0.45;
+    this.prevBaseHp = state.baseHp;
     this.tickShake(dt);
     this.syncTowers(state, dt);
     this.syncEnemies(state, dt);
@@ -406,6 +422,17 @@ export class Renderer {
     this.tickParticles(dt);
     this.tickDmgNums(dt);
     this.tickBanner(dt);
+    this.tickBaseFlash(dt);
+  }
+
+  private tickBaseFlash(dt: number): void {
+    if (!this.baseFlashOverlay) return;
+    if (this.baseFlashTimer > 0) {
+      this.baseFlashTimer -= dt;
+      this.baseFlashOverlay.alpha = Math.max(0, this.baseFlashTimer / 0.45) * 0.38;
+    } else {
+      this.baseFlashOverlay.alpha = 0;
+    }
   }
 
   // ── Screen shake ────────────────────────────────────────────────────────
@@ -576,10 +603,17 @@ export class Renderer {
         sp.barrel.position.y = 0;
       }
 
-      // Muzzle decay
+      // Muzzle decay + firing glow
       if (sp.muzzleTimer > 0) {
         sp.muzzleTimer -= dt;
         sp.muzzle.alpha = Math.max(0, sp.muzzleTimer / MUZZLE_DUR);
+        const ga = (sp.muzzleTimer / MUZZLE_DUR) * 0.5;
+        const gc = TC[tower.type] ?? 0xffffff;
+        sp.glow.clear();
+        sp.glow.circle(0, 0, TILE * 0.68).fill({ color: gc, alpha: ga });
+        sp.glow.circle(0, 0, TILE * 0.52).fill({ color: 0xffffff, alpha: ga * 0.3 });
+      } else {
+        sp.glow.clear();
       }
 
       // Upgrade stars + pop
@@ -616,19 +650,25 @@ export class Renderer {
   private updateStars(sp: TowerSprite, level: number): void {
     sp.starsContainer.removeChildren();
     if (level <= 0) return;
-    const starSize = 9;
-    const gap = 10;
-    const totalW = level * gap;
-    for (let i = 0; i < level; i++) {
-      const star = new Text({ text: '★', style: {
-        fontFamily: 'Arial',
-        fontSize: starSize,
-        fontWeight: '900',
-        fill: 0xffd700,
+    if (level <= 5) {
+      const gap = 10;
+      const totalW = level * gap;
+      for (let i = 0; i < level; i++) {
+        const star = new Text({ text: '★', style: { fontFamily: 'Arial', fontSize: 9, fontWeight: '900', fill: 0xffd700 }});
+        star.anchor.set(0.5, 0);
+        star.position.set(-totalW / 2 + gap / 2 + i * gap, TILE * 0.5);
+        sp.starsContainer.addChild(star);
+      }
+    } else {
+      // Compact badge for high levels
+      const badge = new Text({ text: `★${level}`, style: {
+        fontFamily: 'Arial Black, Arial', fontSize: 11, fontWeight: '900',
+        fill: level >= 10 ? 0xff6600 : 0xffd700,
+        dropShadow: { alpha: 0.9, angle: Math.PI / 2, blur: 4, color: 0x000000, distance: 1 },
       }});
-      star.anchor.set(0.5, 0);
-      star.position.set(-totalW/2 + gap/2 + i * gap, TILE * 0.5);
-      sp.starsContainer.addChild(star);
+      badge.anchor.set(0.5, 0);
+      badge.position.set(0, TILE * 0.48);
+      sp.starsContainer.addChild(badge);
     }
   }
 
@@ -646,6 +686,10 @@ export class Renderer {
     const shadow = new Graphics();
     shadow.ellipse(3, 5, TILE * 0.46, TILE * 0.22).fill({ color: 0x000000, alpha: 0.38 });
     cont.addChild(shadow);
+
+    // Tower fire glow (animated in syncTowers when muzzle fires)
+    const glow = new Graphics();
+    cont.addChild(glow);
 
     // Stone platform base
     const platform = new Graphics();
@@ -795,7 +839,7 @@ export class Renderer {
       muzzleTimer: 0, angle: -Math.PI/2,
       popTimer: SPAWN_DUR, recoilTimer: 0, recoilMax: RECOIL_DUR,
       upgradeLevel: 0, starsContainer,
-      selRing, selTime: 0,
+      selRing, selTime: 0, glow,
     };
   }
 
@@ -867,8 +911,19 @@ export class Renderer {
         sp = this.makeEnemy(en.type);
         sp.prevHp = en.hp;
         sp.bobTimer = Math.random() * Math.PI * 2;
+        sp.container.scale.set(0);
         this.enemyLayer.addChild(sp.container);
         this.enemySprites.set(en.id, sp);
+      }
+
+      // Spawn pop-in animation
+      if (sp.spawnTimer > 0) {
+        sp.spawnTimer -= dt;
+        const t = 1 - Math.max(0, sp.spawnTimer) / (SPAWN_DUR * 1.5);
+        const sc = t < 0.65 ? (t / 0.65) * 1.25 : 1.25 - 0.25 * ((t - 0.65) / 0.35);
+        sp.container.scale.set(Math.max(0.01, sc));
+      } else if (!sp.isDying) {
+        sp.container.scale.set(1);
       }
 
       if (en.isDead && !sp.isDying) {
@@ -939,7 +994,7 @@ export class Renderer {
     hpFg.roundRect(-bW/2, -r-10, bW, 5, 2.5).fill({ color: 0x22ee66 });
     cont.addChild(hpFg);
 
-    return { container: cont, body, hpFg, prevHp: 0, flashTimer: 0, bobTimer: 0, isDying: false, deathTimer: 0 };
+    return { container: cont, body, hpFg, prevHp: 0, flashTimer: 0, bobTimer: 0, isDying: false, deathTimer: 0, spawnTimer: SPAWN_DUR * 1.5 };
   }
 
   private drawEnemyBody(g: Graphics, type: string, r: number, color: number): void {
@@ -1343,7 +1398,7 @@ export class Renderer {
         const dots: Graphics[] = [];
         for (let i = 0; i < TRAIL_LEN; i++) {
           const g = new Graphics();
-          const ri = Math.max(1, 4 - i * 0.5);
+          const ri = Math.max(1.2, 5.5 - i * 0.65);
           const dotColor = i === 0 ? 0xffffff : i === 1 ? headColor : trailColor;
           g.circle(0, 0, ri).fill({ color: dotColor });
           g.alpha = 0;
@@ -1371,17 +1426,26 @@ export class Renderer {
   // ── PARTICLES ────────────────────────────────────────────────────────────
 
   private burstParticles(x: number, y: number, color: number, r: number): void {
-    const n = 5 + Math.ceil(r * 0.6);
+    const n = 8 + Math.ceil(r * 0.9);
+    const light = adjustColor(color, 1.6);
     for (let i = 0; i < n; i++) {
-      const angle = (Math.PI*2*i)/n + Math.random()*0.7;
-      const spd   = 40 + Math.random()*75;
-      const life  = 0.35 + Math.random()*0.2;
+      const angle = (Math.PI * 2 * i) / n + Math.random() * 0.8;
+      const spd   = 55 + Math.random() * 110;
+      const size  = 1.8 + Math.random() * 4;
+      const life  = 0.38 + Math.random() * 0.28;
       const g     = new Graphics();
-      g.circle(0, 0, 1.5 + Math.random()*2.5).fill({ color: i%3===0 ? 0xffffff : color });
+      const col = i % 4 === 0 ? 0xffffff : i % 4 === 1 ? light : i % 4 === 2 ? color : 0xffdd44;
+      g.circle(0, 0, size).fill({ color: col });
       g.position.set(x, y);
       this.particleLayer.addChild(g);
-      this.particles.push({ g, x, y, vx: Math.cos(angle)*spd, vy: Math.sin(angle)*spd - 30, life, maxLife: life });
+      this.particles.push({ g, x, y, vx: Math.cos(angle) * spd, vy: Math.sin(angle) * spd - 45, life, maxLife: life });
     }
+    // Extra large center flash
+    const flash = new Graphics();
+    flash.circle(0, 0, r * 0.55).fill({ color: 0xffffff, alpha: 0.7 });
+    flash.position.set(x, y);
+    this.particleLayer.addChild(flash);
+    this.particles.push({ g: flash, x, y, vx: 0, vy: 0, life: 0.12, maxLife: 0.12 });
   }
 
   private tickParticles(dt: number): void {
@@ -1448,6 +1512,8 @@ export class Renderer {
     this.dmgNums = [];
     this.banner = null;
     this.bannerSub = null;
+    this.baseFlashOverlay = null;
+    this.prevBaseHp = -1;
   }
 }
 

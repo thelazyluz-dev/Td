@@ -78,6 +78,17 @@ const UPGRADE_FLAVOR: Record<string, [string, string, string]> = {
   ],
 };
 
+const HIGH_LEVEL_FLAVOR = [
+  'שדרוג מקצועי. הם מתחילים לבכות.',
+  'כוח מופלא. פחות חרקים מאוד.',
+  'ניסוי מדעי מסווג — על החרקים.',
+  'הנשק שלך — מבצר. החרקים — מבולבלים.',
+  'שינוי פרדיגמה. שאל את הנמלים.',
+  'הם שולחים מכתב תלונה לעיריה.',
+  'מונסטר-טאואר. רשמי.',
+  'עצור. זה כבר לא הוגן לחרקים.',
+];
+
 export function HUD() {
   const {
     state, selectedTower, selectedUpgradeTowerId,
@@ -296,10 +307,8 @@ export function HUD() {
         const def = TOWER_DEFS[upgradeTowerData.type];
         if (!def) return null;
         const lvl       = upgradeTowerData.upgrades;
-        const maxLvl    = 3;
-        const isMaxed   = lvl >= maxLvl;
         const upgCost   = upgradeTowerData.upgradeCost;
-        const canUpg    = !isMaxed && state.gold >= upgCost;
+        const canUpg    = state.gold >= upgCost;
         const sellAmt   = Math.round((upgradeTowerData as any).totalSpent * 0.6);
         const accentCol = TOWER_COLORS[upgradeTowerData.type] ?? '#88ee88';
         // current stats
@@ -342,19 +351,20 @@ export function HUD() {
                 <div style={{ color: '#f0fff0', fontWeight: 800, fontSize: 15, letterSpacing: '-0.01em' }}>
                   {TOWER_NAMES_HE[upgradeTowerData.type] ?? upgradeTowerData.type}
                 </div>
-                {/* Upgrade level bar */}
-                <div style={{ display: 'flex', gap: 4, marginTop: 4, alignItems: 'center' }}>
-                  {Array.from({ length: maxLvl }).map((_, i) => (
+                {/* Upgrade level pips */}
+                <div style={{ display: 'flex', gap: 3, marginTop: 4, alignItems: 'center' }}>
+                  {Array.from({ length: Math.max(lvl, 1) <= 5 ? Math.max(lvl, 1) : 5 }).map((_, i) => (
                     <div key={i} style={{
-                      height: 6, flex: 1, borderRadius: 3,
+                      height: 6, minWidth: 14, flex: 1, borderRadius: 3,
                       background: i < lvl ? accentCol : 'rgba(255,255,255,0.12)',
-                      boxShadow: i < lvl ? `0 0 6px ${accentCol}88` : 'none',
-                      transition: 'all 0.2s',
+                      boxShadow: i < lvl ? `0 0 5px ${accentCol}88` : 'none',
+                      transition: 'background 0.2s',
                     }} />
                   ))}
-                  <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, marginLeft: 4 }}>
-                    {lvl}/{maxLvl}
-                  </span>
+                  {lvl > 5 && (
+                    <span style={{ color: accentCol, fontSize: 10, fontWeight: 800, marginLeft: 2 }}>+{lvl - 5}</span>
+                  )}
+                  <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, marginLeft: 4 }}>★{lvl}</span>
                 </div>
               </div>
               <button
@@ -378,39 +388,33 @@ export function HUD() {
                   {upgradeTowerData.type === 'BugLight' && <StatRow label="נזק×" val="+35%" col="#ffff44" />}
                 </div>
               </div>
-              {/* Next level or maxed */}
+              {/* Next level */}
               <div style={{
-                background: isMaxed ? 'rgba(255,200,0,0.06)' : canUpg ? 'rgba(80,200,80,0.06)' : 'rgba(255,255,255,0.03)',
+                background: canUpg ? 'rgba(80,200,80,0.06)' : 'rgba(255,255,255,0.03)',
                 borderRadius: 10, padding: '8px 10px',
-                border: `1px solid ${isMaxed ? 'rgba(255,200,0,0.2)' : canUpg ? 'rgba(80,200,80,0.18)' : 'rgba(255,255,255,0.07)'}`,
+                border: `1px solid ${canUpg ? 'rgba(80,200,80,0.18)' : 'rgba(255,255,255,0.07)'}`,
               }}>
-                {isMaxed ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 4 }}>
-                    <div style={{ fontSize: 18 }}>★</div>
-                    <div style={{ color: '#ffd700', fontSize: 10, fontWeight: 700, textAlign: 'center' }}>מקסימום</div>
-                  </div>
-                ) : (
-                  <>
-                    <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>רמה {lvl + 1}</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      {nextDps > 0 && <StatRow label="DPS" val={`${nextDps}`} col="#ff9944" arrow={curDps > 0 ? `+${Math.round((nextDps/curDps-1)*100)}%` : undefined} />}
-                      {nextRange > 0 && <StatRow label="טווח" val={`${nextRange}`} col="#44ccff" arrow={curRange > 0 ? `+${Math.round((nextRange/curRange-1)*100)}%` : undefined} />}
+                <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>★{lvl + 1}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {nextDps > 0 && <StatRow label="DPS" val={`${nextDps}`} col="#ff9944" arrow={curDps > 0 ? `+${Math.round((nextDps/curDps-1)*100)}%` : undefined} />}
+                  {nextRange > 0 && <StatRow label="טווח" val={`${nextRange}`} col="#44ccff" arrow={curRange > 0 ? `+${Math.round((nextRange/curRange-1)*100)}%` : undefined} />}
+                </div>
+                {(() => {
+                  const flavor = UPGRADE_FLAVOR[upgradeTowerData.type]?.[lvl]
+                    ?? (lvl >= 3 ? HIGH_LEVEL_FLAVOR[(lvl - 3) % HIGH_LEVEL_FLAVOR.length] : null);
+                  return flavor ? (
+                    <div style={{ marginTop: 6, color: '#aaffaa', fontSize: 9, fontStyle: 'italic', lineHeight: 1.4, opacity: 0.85 }}>
+                      {flavor}
                     </div>
-                    {UPGRADE_FLAVOR[upgradeTowerData.type]?.[lvl] && (
-                      <div style={{ marginTop: 6, color: '#aaffaa', fontSize: 9, fontStyle: 'italic', lineHeight: 1.4, opacity: 0.85 }}>
-                        {UPGRADE_FLAVOR[upgradeTowerData.type][lvl]}
-                      </div>
-                    )}
-                  </>
-                )}
+                  ) : null;
+                })()}
               </div>
             </div>
 
             {/* Action buttons */}
             <div style={{ display: 'flex', gap: 8 }}>
               {/* Upgrade button */}
-              {!isMaxed && (
-                <button
+              <button
                   disabled={!canUpg}
                   onPointerDown={() => { if (canUpg) upgradeTower(upgradeTowerData.id); }}
                   style={{
@@ -430,12 +434,11 @@ export function HUD() {
                 >
                   {canUpg ? `⬆ שדרג  $${upgCost}` : `צריך $${upgCost}`}
                 </button>
-              )}
               {/* Sell button */}
               <button
                 onPointerDown={() => sellTower(upgradeTowerData.id)}
                 style={{
-                  flex: isMaxed ? 1 : 1, padding: '11px 0', borderRadius: 11,
+                  flex: 1, padding: '11px 0', borderRadius: 11,
                   border: '1.5px solid rgba(220,80,80,0.35)',
                   background: 'rgba(180,40,40,0.18)',
                   color: '#ff8888', fontSize: 12, fontWeight: 700,
