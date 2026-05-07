@@ -62,7 +62,6 @@ export class GameEngine {
   private isPaused = false;
   private regenHPPerThirty = 0;
   private waveKillsCount = 0;
-  private waveEscapedCount = 0;
   private lastWaveKills = 0;
   private lastWaveEscaped = 0;
   private currentWaveModifier: 'speed' | 'armor' | null = null;
@@ -195,7 +194,6 @@ export class GameEngine {
     this.baseDamagedThisWave = false;
     this.lastPerfectBonus = 0;
     this.waveKillsCount = 0;
-    this.waveEscapedCount = 0;
     this.currentWaveModifier = this.waveModifierFor(this.committedWaveIdx);
     const ws = new WaveSystem();
     ws.startWave(this.committedWaveIdx, this.currentWaveModifier);
