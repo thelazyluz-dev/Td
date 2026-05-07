@@ -13,9 +13,9 @@ export default defineConfig({
       injectRegister: 'auto',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'pwa-*.png'],
       manifest: {
-        name: 'Last Stand',
-        short_name: 'Last Stand',
-        description: 'Tower Defense Roguelike — survive 10 waves of the undead',
+        name: 'Bug Off!',
+        short_name: 'Bug Off!',
+        description: 'הגנת המטבח — עצור 10 גלי חרקים!',
         theme_color: '#050505',
         background_color: '#050505',
         display: 'standalone',
@@ -34,6 +34,8 @@ export default defineConfig({
         ],
       },
       workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
         runtimeCaching: [
           {
