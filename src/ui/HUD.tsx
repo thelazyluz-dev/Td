@@ -12,6 +12,17 @@ const TOWER_ICONS: Record<string, string> = {
   BugLight:   '💡',
 };
 
+const TOWER_NAMES_HE: Record<string, string> = {
+  BugSpray:   'ספריי',
+  Swatter:    'מחבט',
+  Zapper:     'מחשמל',
+  Sprinkler:  'ממטרה',
+  MagGlass:   'מגדלת',
+  PoisonBomb: 'פצצה',
+  GlueTrap:   'דבק',
+  BugLight:   'פנס',
+};
+
 const TOWER_COLORS: Record<string, string> = {
   BugSpray:   '#44aaff',
   Swatter:    '#ff7722',
@@ -70,7 +81,7 @@ export function HUD() {
               <span style={{ color: '#ffe066', fontFamily: 'monospace', fontWeight: 700, fontSize: 13 }}>{state.gold}</span>
             </div>
             <div className="flex items-center gap-1">
-              <span style={{ color: '#66aaff', fontWeight: 700, fontSize: 9, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Wave</span>
+              <span style={{ color: '#66aaff', fontWeight: 700, fontSize: 9, letterSpacing: '0.08em' }}>גל</span>
               <span style={{ color: '#88ccff', fontFamily: 'monospace', fontWeight: 700, fontSize: 13 }}>
                 {state.wave}<span style={{ color: 'rgba(100,160,255,0.4)', fontSize: 11 }}>/10</span>
               </span>
@@ -176,7 +187,7 @@ export function HUD() {
                   }}
                 >
                   <span style={{ fontSize: 15, lineHeight: 1 }}>{TOWER_ICONS[def.type] ?? '🗼'}</span>
-                  <span style={{ color: '#e5e7eb', fontSize: 9, fontWeight: 700, lineHeight: 1.2 }}>{def.type}</span>
+                  <span style={{ color: '#e5e7eb', fontSize: 9, fontWeight: 700, lineHeight: 1.2 }}>{TOWER_NAMES_HE[def.type] ?? def.type}</span>
                   <span style={{ color: canAfford ? '#ffd700' : '#888', fontSize: 9, lineHeight: 1, fontWeight: 700 }}>${def.cost}</span>
                 </button>
               );
@@ -234,7 +245,7 @@ export function HUD() {
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ color: '#f0fff0', fontWeight: 800, fontSize: 15, letterSpacing: '-0.01em' }}>
-                  {upgradeTowerData.type}
+                  {TOWER_NAMES_HE[upgradeTowerData.type] ?? upgradeTowerData.type}
                 </div>
                 {/* Upgrade level bar */}
                 <div style={{ display: 'flex', gap: 4, marginTop: 4, alignItems: 'center' }}>

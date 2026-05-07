@@ -126,6 +126,7 @@ export class Renderer {
 
   // Wave banner
   private banner: Text | null = null;
+  private bannerSub: Text | null = null;
   private bannerTimer = 0;
   private bannerDur   = 0;
 
@@ -415,38 +416,71 @@ export class Renderer {
   // ── Wave banner ─────────────────────────────────────────────────────────
 
   showWaveBanner(waveNum: number): void {
-    if (this.banner) { this.uiLayer.removeChild(this.banner); this.banner = null; }
-    const isFinal = waveNum === 10;
-    const isBoss  = waveNum === 5;
-    const label   = isFinal ? '⚠ FINAL WAVE ⚠' : isBoss ? '— BOSS —' : `WAVE ${waveNum}`;
-    const color   = isFinal ? 0xff2020 : isBoss ? 0xff6600 : 0xffffff;
+    if (this.banner)    { this.uiLayer.removeChild(this.banner);    this.banner    = null; }
+    if (this.bannerSub) { this.uiLayer.removeChild(this.bannerSub); this.bannerSub = null; }
+
+    const WAVE_TEXT: Record<number, [string, string, number]> = {
+      1:  ['גל 1 🐜',          'הנמלים יצאו לסיור... בלי רשות',       0xffffff],
+      2:  ['גל 2 🐜🐜',        'הביאו חברים. שוב, בלי רשות.',          0xffffff],
+      3:  ['גל 3 🦟',          'יתושים? לפחות הם קטנים.',              0xffffff],
+      4:  ['גל 4 🦟🪲',        'כמה שיש פה חרקים... שגעון',           0xffffff],
+      5:  ['🔥 הבוס הגיע! 🔥', 'נמלת האש. אמא שלהם. מגיעה.',          0xff6600],
+      6:  ['גל 6 🪳',          'מקקים?! לא בבית שלנו!!',               0xffffff],
+      7:  ['גל 7 🐝',          'הצרעות כועסות. מאוד.',                 0xffcc00],
+      8:  ['גל 8 🪲💥',        'טרמיטים. הם אוהבים עץ. והכל.',        0xffffff],
+      9:  ['גל 9 😤',          'כמעט... כמעט... אל תיכנע!!!',          0xff9944],
+      10: ['👑 המלכה הגיעה! 👑','עכשיו זה אישי. קרב אחרון!',           0xff2020],
+    };
+    const [label, sub, color] = WAVE_TEXT[waveNum] ?? [`גל ${waveNum}`, '', 0xffffff];
+
     const t = new Text({ text: label, style: {
       fontFamily: 'Arial Black, Arial',
-      fontSize: 44,
+      fontSize: 40,
       fontWeight: '900',
       fill: color,
-      dropShadow: { alpha: 0.9, angle: Math.PI/2, blur: 6, color: 0x000000, distance: 3 },
+      dropShadow: { alpha: 0.9, angle: Math.PI/2, blur: 8, color: 0x000000, distance: 3 },
     }});
     t.anchor.set(0.5);
-    t.position.set(CANVAS_W / 2, CANVAS_H / 2 - 20);
+    t.position.set(CANVAS_W / 2, CANVAS_H / 2 - 28);
     t.alpha = 0;
     this.uiLayer.addChild(t);
     this.banner = t;
-    this.bannerDur = 2.4;
+
+    if (sub) {
+      const ts = new Text({ text: sub, style: {
+        fontFamily: 'Arial, sans-serif',
+        fontSize: 16,
+        fontWeight: '700',
+        fill: 0xffffff,
+        dropShadow: { alpha: 0.8, angle: Math.PI/2, blur: 4, color: 0x000000, distance: 2 },
+      }});
+      ts.anchor.set(0.5);
+      ts.position.set(CANVAS_W / 2, CANVAS_H / 2 + 18);
+      ts.alpha = 0;
+      this.uiLayer.addChild(ts);
+      this.bannerSub = ts;
+    }
+
+    this.bannerDur = 2.8;
     this.bannerTimer = this.bannerDur;
   }
 
   private tickBanner(dt: number): void {
     if (!this.banner) return;
     this.bannerTimer -= dt;
-    if (this.bannerTimer <= 0) { this.uiLayer.removeChild(this.banner); this.banner = null; return; }
-    const remaining = this.bannerTimer / this.bannerDur;
-    const fadeIn  = (this.bannerDur - this.bannerTimer) / 0.25;
-    const fadeOut = this.bannerTimer / 0.5;
-    this.banner.alpha = Math.min(1, fadeIn, fadeOut);
-    const s = 0.6 + 0.4 * Math.min(1, fadeIn);
+    if (this.bannerTimer <= 0) {
+      this.uiLayer.removeChild(this.banner); this.banner = null;
+      if (this.bannerSub) { this.uiLayer.removeChild(this.bannerSub); this.bannerSub = null; }
+      return;
+    }
+    const fadeIn  = (this.bannerDur - this.bannerTimer) / 0.28;
+    const fadeOut = this.bannerTimer / 0.55;
+    const a = Math.min(1, fadeIn, fadeOut);
+    this.banner.alpha = a;
+    if (this.bannerSub) this.bannerSub.alpha = a * 0.88;
+    const s = 0.55 + 0.45 * Math.min(1, fadeIn);
     this.banner.scale.set(s);
-    void remaining;
+    if (this.bannerSub) this.bannerSub.scale.set(0.75 + 0.25 * Math.min(1, fadeIn));
   }
 
   // ── TOWERS ──────────────────────────────────────────────────────────────
@@ -1311,6 +1345,8 @@ export class Renderer {
     this.trails.clear();
     this.particles = [];
     this.dmgNums = [];
+    this.banner = null;
+    this.bannerSub = null;
   }
 }
 

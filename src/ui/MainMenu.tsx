@@ -22,10 +22,10 @@ function IOSInstallTooltip({ onClose }: { onClose: () => void }) {
         onClick={e => e.stopPropagation()}
       >
         <p style={{ margin: 0, fontSize: 28 }}>📲</p>
-        <p style={{ margin: '10px 0 4px', fontWeight: 700, fontSize: 16 }}>Add to Home Screen</p>
+        <p style={{ margin: '10px 0 4px', fontWeight: 700, fontSize: 16 }}>הוסף למסך הבית</p>
         <p style={{ margin: 0, color: 'rgba(255,255,255,0.55)', fontSize: 13, lineHeight: 1.6 }}>
-          Tap <strong style={{ color: '#fff' }}>Share ↑</strong> at the bottom of Safari,<br />
-          then choose <strong style={{ color: '#fff' }}>"Add to Home Screen"</strong>
+          לחץ על <strong style={{ color: '#fff' }}>Share ↑</strong> בתחתית Safari,<br />
+          ואז בחר <strong style={{ color: '#fff' }}>"Add to Home Screen"</strong>
         </p>
         <button
           onClick={onClose}
@@ -35,7 +35,7 @@ function IOSInstallTooltip({ onClose }: { onClose: () => void }) {
             borderRadius: 10, color: '#fff', fontSize: 14, cursor: 'pointer',
           }}
         >
-          Got it
+          הבנתי!
         </button>
       </div>
       {/* Arrow pointing down toward iOS share bar */}
@@ -82,7 +82,7 @@ export function MainMenu() {
             <span style={{ display: 'block', color: '#f59e0b', fontWeight: 900, fontSize: 'clamp(32px, 8vw, 64px)', textShadow: '0 0 70px rgba(245,158,11,0.8), 0 2px 4px rgba(0,0,0,0.8)' }}>OFF!</span>
           </div>
           <p style={{ margin: '6px 0 0', color: 'rgba(255,255,255,0.35)', fontSize: 12, lineHeight: 1.5, maxWidth: 260 }}>
-            נמלים פולשות לבית! הצב מלכודות ועצור אותן.
+            נמלים פלשו למטבח שלך. כמה חוצפה.
           </p>
         </div>
 
@@ -104,8 +104,8 @@ export function MainMenu() {
         <div style={{ display: 'flex', gap: 8, maxWidth: 360 }}>
           {[
             { icon: '🪲', label: 'הצב מלכודות' },
-            { icon: '🌊', label: '10 גלי חרקים' },
-            { icon: '🏠', label: 'הגן על הבית' },
+            { icon: '🔟', label: '10 גלי חרקים' },
+            { icon: '🏠', label: 'הגן על הבית!' },
           ].map(({ icon, label }) => (
             <div key={label} style={{
               flex: 1, display: 'flex', alignItems: 'center', gap: 5,
@@ -131,7 +131,7 @@ export function MainMenu() {
             }}
           >
             <span style={{ fontSize: 18 }}>📲</span>
-            Install App
+            התקן אפליקציה
           </button>
         )}
 
@@ -147,12 +147,12 @@ export function MainMenu() {
             }}
           >
             <span style={{ fontSize: 18 }}>📲</span>
-            Add to Home Screen
+            הוסף למסך הבית
           </button>
         )}
 
         {installState === 'installed' && (
-          <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: 12, margin: 0 }}>✓ Installed</p>
+          <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: 12, margin: 0 }}>✓ מותקן</p>
         )}
       </div>
 
