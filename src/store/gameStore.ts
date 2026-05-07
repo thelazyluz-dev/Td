@@ -18,6 +18,7 @@ interface GameStore {
   resetGame: () => void;
   selectForUpgrade: (id: number | null) => void;
   upgradeTower: (id: number) => void;
+  sellTower: (id: number) => void;
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -81,5 +82,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const { engine } = get();
     if (!engine) return;
     engine.upgradeTower(id);
+  },
+
+  sellTower(id) {
+    const { engine } = get();
+    if (!engine) return;
+    engine.sellTower(id);
+    set({ selectedUpgradeTowerId: null });
   },
 }));

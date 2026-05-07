@@ -210,11 +210,23 @@ export class GameEngine {
   upgradeTower(towerId: number): boolean {
     const tower = this.towers.find(t => t.id === towerId);
     if (!tower || tower.upgrades >= 3) return false;
-    if (!this.economySystem.spend(tower.upgradeCost)) return false;
+    const cost = tower.upgradeCost;
+    if (!this.economySystem.spend(cost)) return false;
+    tower.totalSpent += cost;
     tower.upgrades++;
     tower.damageMultiplier   = 1 + tower.upgrades * 0.5;
     tower.rangeMultiplier    = 1 + tower.upgrades * 0.1;
     tower.fireRateMultiplier = 1 + tower.upgrades * 0.2;
+    this.emit();
+    return true;
+  }
+
+  sellTower(towerId: number): boolean {
+    const idx = this.towers.findIndex(t => t.id === towerId);
+    if (idx === -1) return false;
+    const refund = Math.round(this.towers[idx].totalSpent * 0.6);
+    this.towers.splice(idx, 1);
+    this.economySystem.earn(refund, 1.0);
     this.emit();
     return true;
   }

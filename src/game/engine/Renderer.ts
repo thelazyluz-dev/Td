@@ -213,97 +213,166 @@ export class Renderer {
 
   private drawPath(): void {
     const g = new Graphics();
-
-    // Bright green grass background
-    g.rect(0, 0, CANVAS_W, CANVAS_H).fill({ color: 0x2e6b12 });
-
-    // Grass texture patches (lighter/darker circles)
     const rng = mulberry32(42);
-    for (let i = 0; i < 120; i++) {
+
+    // ── Garden floor: light stone tiles ─────────────────────────────────────
+    const TILE_SZ = 80;
+    for (let ty = 0; ty < CANVAS_H; ty += TILE_SZ) {
+      for (let tx = 0; tx < CANVAS_W; tx += TILE_SZ) {
+        const checker = ((tx / TILE_SZ) + (ty / TILE_SZ)) % 2 === 0;
+        const base = checker ? 0x4a8a20 : 0x3e7a18;
+        g.rect(tx, ty, TILE_SZ, TILE_SZ).fill({ color: base });
+        // Subtle noise
+        g.rect(tx+4, ty+4, TILE_SZ-8, TILE_SZ-8).fill({ color: checker ? 0x52982a : 0x458520, alpha: 0.3 });
+        // Grout lines
+        g.setStrokeStyle({ width: 1, color: 0x2a5510, alpha: 0.35 });
+        g.rect(tx, ty, TILE_SZ, TILE_SZ).stroke();
+      }
+    }
+
+    // ── Grass tufts ──────────────────────────────────────────────────────────
+    for (let i = 0; i < 80; i++) {
       const px = rng() * CANVAS_W;
       const py = rng() * CANVAS_H;
-      const r2 = 8 + rng() * 28;
-      const lighter = rng() > 0.5;
-      const col = lighter ? 0x3d8a18 : 0x235510;
-      g.circle(px, py, r2).fill({ color: col, alpha: 0.45 });
+      const sz = 6 + rng() * 18;
+      g.circle(px, py, sz).fill({ color: rng() > 0.5 ? 0x3a8e14 : 0x266010, alpha: 0.55 });
     }
 
-    // Decorative trees/bushes (dark green circles) away from path
-    const treeRng = mulberry32(99);
-    const treePositions = [
-      { x: 60,  y: 40  }, { x: 200, y: 40  }, { x: 380, y: 40  },
-      { x: 550, y: 40  }, { x: 720, y: 40  }, { x: 60,  y: 460 },
-      { x: 200, y: 460 }, { x: 380, y: 460 }, { x: 550, y: 460 },
-      { x: 720, y: 460 }, { x: 740, y: 300 }, { x: 60,  y: 300 },
-      { x: 400, y: 200 }, { x: 260, y: 400 }, { x: 560, y: 240 },
-      { x: 100, y: 380 }, { x: 440, y: 440 }, { x: 680, y: 440 },
+    // ── Decorative garden plants ─────────────────────────────────────────────
+    const plantRng = mulberry32(99);
+    const plants = [
+      {x:55, y:38}, {x:195, y:38}, {x:375, y:38}, {x:548, y:38}, {x:718, y:38},
+      {x:55, y:462},{x:195, y:462},{x:375, y:462},{x:548, y:462},{x:718, y:462},
+      {x:742, y:300},{x:58, y:300},{x:402, y:200},{x:258, y:400},
     ];
-    for (const pos of treePositions) {
-      const sz = 10 + treeRng() * 10;
-      // Dark green bush/tree
-      g.circle(pos.x, pos.y, sz).fill({ color: 0x1a4d08 });
-      g.circle(pos.x - sz*0.3, pos.y - sz*0.2, sz*0.65).fill({ color: 0x236610 });
-      g.circle(pos.x + sz*0.25, pos.y - sz*0.15, sz*0.55).fill({ color: 0x1e5c0e });
-      // Highlight
-      g.circle(pos.x - sz*0.15, pos.y - sz*0.35, sz*0.3).fill({ color: 0x3a8020, alpha: 0.5 });
+    for (const pos of plants) {
+      const sz = 12 + plantRng() * 8;
+      // Pot
+      g.roundRect(pos.x - sz*0.45, pos.y + sz*0.4, sz*0.9, sz*0.6, 2).fill({ color: 0xcc6633 });
+      // Main foliage
+      g.circle(pos.x, pos.y, sz).fill({ color: 0x1a5508 });
+      g.circle(pos.x - sz*0.4, pos.y - sz*0.2, sz*0.7).fill({ color: 0x246e10 });
+      g.circle(pos.x + sz*0.35, pos.y - sz*0.15, sz*0.6).fill({ color: 0x1f6008 });
+      g.circle(pos.x, pos.y - sz*0.5, sz*0.55).fill({ color: 0x2a7a12 });
+      // Highlights
+      g.circle(pos.x - sz*0.2, pos.y - sz*0.55, sz*0.25).fill({ color: 0x44aa22, alpha: 0.55 });
+      // Flowers
+      const fc = [0xff6688, 0xffcc44, 0xff88aa, 0x88ddff][Math.floor(plantRng()*4)];
+      g.circle(pos.x + sz*0.2, pos.y - sz*0.15, sz*0.18).fill({ color: fc });
+      g.circle(pos.x - sz*0.25, pos.y + sz*0.05, sz*0.15).fill({ color: fc });
     }
 
-    // Path layers: dark edge → main sand → lighter center stripe
+    // ── Ant trail path ───────────────────────────────────────────────────────
     const pts = PATH_WAYPOINTS;
-    const stroke = (w: number, color: number, alpha = 1) => {
-      g.setStrokeStyle({ width: w, color, alpha });
+    const pathStroke = (w: number, color: number, alpha = 1) => {
+      g.setStrokeStyle({ width: w, color, alpha, cap: 'round', join: 'round' });
       g.moveTo(pts[0].x, pts[0].y);
       for (let i = 1; i < pts.length; i++) g.lineTo(pts[i].x, pts[i].y);
       g.stroke();
     };
-    stroke(TILE * 1.1,  0x8a5c1a);          // dark earthy edge
-    stroke(TILE * 0.90, 0xc49030);           // main sandy path
-    stroke(TILE * 0.55, 0xd4a840);           // slightly lighter
-    stroke(6,           0xe0b050, 0.7);      // center highlight stripe
 
-    // Gravel dots on path
+    // Multi-layer path: shadow → earthy edge → main → worn center
+    pathStroke(TILE * 1.25, 0x3a2208, 0.55);  // deep shadow
+    pathStroke(TILE * 1.08, 0x7a4812);          // dark earthy border
+    pathStroke(TILE * 0.92, 0xb8840a);          // warm sand
+    pathStroke(TILE * 0.72, 0xd4a022);          // lighter mid
+    pathStroke(TILE * 0.42, 0xe8c040);          // worn center stripe
+    pathStroke(4,            0xf0d060, 0.45);   // highlight shimmer
+
+    // Packed earth texture dots
+    const earthRng = mulberry32(7);
     for (let i = 0; i < pts.length - 1; i++) {
       const ax = pts[i].x, ay = pts[i].y, bx = pts[i+1].x, by = pts[i+1].y;
-      const steps = Math.ceil(Math.hypot(bx-ax, by-ay) / 8);
+      const steps = Math.ceil(Math.hypot(bx-ax, by-ay) / 6);
       for (let s = 0; s <= steps; s++) {
         const t2 = s / steps;
-        const cx = ax + (bx-ax)*t2 + (Math.random()-0.5)*TILE*0.45;
-        const cy = ay + (by-ay)*t2 + (Math.random()-0.5)*TILE*0.45;
-        const r  = 0.8 + Math.random() * 1.2;
-        const luma = 0x90 + Math.floor(Math.random()*0x20);
-        const col2 = (luma<<16) | (Math.floor(luma*0.82)<<8) | Math.floor(luma*0.55);
-        g.circle(cx, cy, r).fill({ color: col2 });
+        const cx = ax + (bx-ax)*t2 + (earthRng()-0.5)*TILE*0.5;
+        const cy = ay + (by-ay)*t2 + (earthRng()-0.5)*TILE*0.5;
+        const r2 = 0.7 + earthRng() * 1.4;
+        const luma = 0x88 + Math.floor(earthRng()*0x30);
+        const col2 = (Math.floor(luma*0.9)<<16) | (Math.floor(luma*0.72)<<8) | Math.floor(luma*0.38);
+        g.circle(cx, cy, r2).fill({ color: col2 });
       }
     }
 
-    // Ant hill start marker
-    const s = pts[0];
-    g.circle(s.x, s.y, 14).fill({ color: 0x8b4513 });
-    g.circle(s.x, s.y, 11).fill({ color: 0xa0522d });
-    g.circle(s.x, s.y-5, 7).fill({ color: 0x8b4513 });
-    g.circle(s.x-6, s.y+2, 5).fill({ color: 0x8b4513 });
-    g.circle(s.x+5, s.y+3, 5).fill({ color: 0x8b4513 });
-    // Entry holes
-    g.circle(s.x, s.y, 4).fill({ color: 0x3d2008 });
-    g.circle(s.x-5, s.y+4, 3).fill({ color: 0x3d2008 });
-    g.circle(s.x+4, s.y+5, 2).fill({ color: 0x3d2008 });
+    // Pheromone trail dots (subtle)
+    const pheroRng = mulberry32(13);
+    for (let i = 0; i < pts.length - 1; i++) {
+      const ax = pts[i].x, ay = pts[i].y, bx = pts[i+1].x, by = pts[i+1].y;
+      const steps = Math.ceil(Math.hypot(bx-ax, by-ay) / 18);
+      for (let s = 0; s <= steps; s++) {
+        const t2 = s / steps;
+        const cx = ax + (bx-ax)*t2 + (pheroRng()-0.5)*8;
+        const cy = ay + (by-ay)*t2 + (pheroRng()-0.5)*8;
+        g.circle(cx, cy, 1.2).fill({ color: 0xffcc44, alpha: 0.25 });
+      }
+    }
 
-    // House end marker
-    const e = pts[pts.length - 1];
-    const hx = e.x, hy = e.y;
-    // House body
-    g.roundRect(hx-13, hy-8, 26, 22, 2).fill({ color: 0xf5deb3 });
-    g.setStrokeStyle({ width: 1.5, color: 0xcc9944 }); g.roundRect(hx-13, hy-8, 26, 22, 2).stroke();
-    // Roof
-    g.poly([hx-15, hy-8, hx+15, hy-8, hx, hy-24]).fill({ color: 0xcc4422 });
-    g.setStrokeStyle({ width: 1.5, color: 0x882211 }); g.poly([hx-15, hy-8, hx+15, hy-8, hx, hy-24]).stroke();
+    // ── Ant hill (start) ─────────────────────────────────────────────────────
+    const sp = pts[0];
+    // Shadow
+    g.ellipse(sp.x + 2, sp.y + 4, 20, 8).fill({ color: 0x000000, alpha: 0.25 });
+    // Mound layers
+    g.circle(sp.x, sp.y, 20).fill({ color: 0x6b3a10 });
+    g.circle(sp.x, sp.y - 3, 16).fill({ color: 0x8a4e18 });
+    g.circle(sp.x - 7, sp.y + 2, 10).fill({ color: 0x7a4414 });
+    g.circle(sp.x + 6, sp.y + 3, 9).fill({ color: 0x7a4414 });
+    g.circle(sp.x, sp.y - 7, 10).fill({ color: 0x8a4e18 });
+    // Top highlight
+    g.circle(sp.x - 4, sp.y - 8, 6).fill({ color: 0xa06030, alpha: 0.6 });
+    // Entry tunnels
+    g.circle(sp.x, sp.y + 2, 5).fill({ color: 0x2a1204 });
+    g.circle(sp.x - 7, sp.y + 6, 3).fill({ color: 0x2a1204 });
+    g.circle(sp.x + 5, sp.y + 7, 2.5).fill({ color: 0x2a1204 });
+    // Loose soil around base
+    for (let i = 0; i < 12; i++) {
+      const a = (Math.PI * 2 * i) / 12;
+      const d = 18 + i % 3 * 3;
+      g.circle(sp.x + Math.cos(a)*d, sp.y + Math.sin(a)*d*0.55, 1.5).fill({ color: 0x9a6030, alpha: 0.6 });
+    }
+
+    // ── House (end) ──────────────────────────────────────────────────────────
+    const ep = pts[pts.length - 1];
+    const hx = ep.x, hy = ep.y;
+    // Drop shadow
+    g.ellipse(hx+3, hy+26, 28, 7).fill({ color: 0x000000, alpha: 0.3 });
+    // Foundation
+    g.roundRect(hx-20, hy+12, 40, 6, 1).fill({ color: 0x998866 });
+    // Walls
+    g.roundRect(hx-18, hy-12, 36, 26, 2).fill({ color: 0xf5e8c8 });
+    g.setStrokeStyle({ width: 1.5, color: 0xccaa77 }); g.roundRect(hx-18, hy-12, 36, 26, 2).stroke();
+    // Side wall shading
+    g.roundRect(hx+12, hy-10, 6, 24, 1).fill({ color: 0xddcc99, alpha: 0.5 });
+    // Roof (gabled)
+    g.poly([hx-22, hy-12, hx+22, hy-12, hx, hy-34]).fill({ color: 0xcc3311 });
+    g.setStrokeStyle({ width: 1.5, color: 0x991100 });
+    g.poly([hx-22, hy-12, hx+22, hy-12, hx, hy-34]).stroke();
+    // Roof shingles
+    g.poly([hx, hy-34, hx+22, hy-12, hx+2, hy-12]).fill({ color: 0xaa2200, alpha: 0.35 });
+    // Chimney
+    g.roundRect(hx+8, hy-40, 7, 14, 1).fill({ color: 0xaa7755 });
+    g.setStrokeStyle({ width: 1, color: 0x886644 }); g.roundRect(hx+8, hy-40, 7, 14, 1).stroke();
     // Door
-    g.roundRect(hx-4, hy+2, 8, 12, 2).fill({ color: 0x8b4513 });
-    // Window
-    g.roundRect(hx-10, hy-4, 7, 7, 1).fill({ color: 0xaaddff });
-    g.setStrokeStyle({ width: 1, color: 0x888888 });
-    g.moveTo(hx-6.5, hy-4).lineTo(hx-6.5, hy+3).stroke();
-    g.moveTo(hx-10, hy-0.5).lineTo(hx-3, hy-0.5).stroke();
+    g.roundRect(hx-5, hy+2, 10, 16, 2).fill({ color: 0x7a4010 });
+    g.circle(hx+3, hy+10, 1.5).fill({ color: 0xffcc44 }); // doorknob
+    // Window left
+    g.roundRect(hx-16, hy-8, 9, 9, 1).fill({ color: 0x88ccff });
+    g.setStrokeStyle({ width: 1, color: 0xffffff, alpha: 0.5 });
+    g.moveTo(hx-11.5, hy-8).lineTo(hx-11.5, hy+1).stroke();
+    g.moveTo(hx-16, hy-3.5).lineTo(hx-7, hy-3.5).stroke();
+    // Light in window
+    g.roundRect(hx-16, hy-8, 9, 9, 1).fill({ color: 0xffff88, alpha: 0.2 });
+    // Window right
+    g.roundRect(hx+7, hy-8, 9, 9, 1).fill({ color: 0x88ccff });
+    g.setStrokeStyle({ width: 1, color: 0xffffff, alpha: 0.5 });
+    g.moveTo(hx+11.5, hy-8).lineTo(hx+11.5, hy+1).stroke();
+    g.moveTo(hx+7, hy-3.5).lineTo(hx+16, hy-3.5).stroke();
+    // Warning label
+    g.circle(hx, hy-44, 7).fill({ color: 0xffdd00 });
+    g.setStrokeStyle({ width: 1.5, color: 0xcc8800 }); g.circle(hx, hy-44, 7).stroke();
+    // "!" mark
+    g.roundRect(hx-1, hy-49, 2, 6, 1).fill({ color: 0xcc5500 });
+    g.circle(hx, hy-41, 1.2).fill({ color: 0xcc5500 });
 
     this.pathLayer.addChild(g);
   }

@@ -23,6 +23,7 @@ export class Tower {
   // upgrade tracking
   baseCost: number;
   upgrades: number = 0;
+  totalSpent: number; // base cost + all upgrade costs paid (for sell refund)
 
   constructor(def: TowerDef, pos: Vec2) {
     this.id = _nextTowerId++;
@@ -35,6 +36,7 @@ export class Tower {
     this.aoeRadius = def.aoeRadius ?? 0;
     this.fireCooldown = 0;
     this.baseCost = def.cost;
+    this.totalSpent = def.cost;
   }
 
   get effectiveRange() { return this.range * this.rangeMultiplier; }

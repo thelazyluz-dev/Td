@@ -27,7 +27,7 @@ export function HUD() {
   const {
     state, selectedTower, selectedUpgradeTowerId,
     selectTower, skipBuild, sendNextWave, airStrike, empBlast,
-    selectForUpgrade, upgradeTower,
+    selectForUpgrade, upgradeTower, sellTower,
   } = useGameStore();
   if (!state) return null;
 
@@ -185,109 +185,177 @@ export function HUD() {
         )}
       </div>
 
-      {/* ── Upgrade bottom sheet ── */}
-      {upgradeTowerData && (
-        <div
-          style={{
-            position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
-            width: '100%', maxWidth: 440,
-            background: 'rgba(0,18,0,0.96)',
-            borderTop: '2px solid rgba(80,220,80,0.35)',
-            borderLeft: '1px solid rgba(80,220,80,0.15)',
-            borderRight: '1px solid rgba(80,220,80,0.15)',
-            borderRadius: '16px 16px 0 0',
-            padding: '16px 20px 20px',
-            zIndex: 20,
-            backdropFilter: 'blur(12px)',
-            boxShadow: '0 -8px 32px rgba(0,0,0,0.6)',
-            pointerEvents: 'auto',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 22 }}>{TOWER_ICONS[upgradeTowerData.type] ?? '🗼'}</span>
-              <div>
-                <div style={{ color: '#e0ffe0', fontWeight: 700, fontSize: 15 }}>{upgradeTowerData.type}</div>
-                <div style={{ display: 'flex', gap: 3, marginTop: 2 }}>
-                  {[0,1,2].map(i => (
-                    <span key={i} style={{ fontSize: 12, color: i < upgradeTowerData.upgrades ? '#ffd700' : 'rgba(255,255,255,0.2)' }}>
-                      {i < upgradeTowerData.upgrades ? '●' : '○'}
-                    </span>
+      {/* ── Tower upgrade / sell sheet ── */}
+      {upgradeTowerData && (() => {
+        const def = TOWER_DEFS[upgradeTowerData.type];
+        if (!def) return null;
+        const lvl       = upgradeTowerData.upgrades;
+        const maxLvl    = 3;
+        const isMaxed   = lvl >= maxLvl;
+        const upgCost   = upgradeTowerData.upgradeCost;
+        const canUpg    = !isMaxed && state.gold >= upgCost;
+        const sellAmt   = Math.round((upgradeTowerData as any).totalSpent * 0.6);
+        const accentCol = TOWER_COLORS[upgradeTowerData.type] ?? '#88ee88';
+        // current stats
+        const curDps    = def.dps > 0 ? Math.round(def.dps * upgradeTowerData.damageMultiplier * upgradeTowerData.fireRateMultiplier * 10) / 10 : 0;
+        const curRange  = Math.round(def.range * upgradeTowerData.rangeMultiplier);
+        // next level stats
+        const nextDmgMult = 1 + (lvl + 1) * 0.5;
+        const nextFrMult  = 1 + (lvl + 1) * 0.2;
+        const nextRngMult = 1 + (lvl + 1) * 0.1;
+        const nextDps   = def.dps > 0 ? Math.round(def.dps * nextDmgMult * nextFrMult * 10) / 10 : 0;
+        const nextRange = Math.round(def.range * nextRngMult);
+
+        return (
+          <div
+            style={{
+              position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
+              width: '100%', maxWidth: 460,
+              background: 'rgba(5,14,5,0.97)',
+              borderTop: `2px solid ${accentCol}55`,
+              borderLeft: `1px solid ${accentCol}22`,
+              borderRight: `1px solid ${accentCol}22`,
+              borderRadius: '18px 18px 0 0',
+              padding: '14px 18px 18px',
+              zIndex: 20,
+              backdropFilter: 'blur(16px)',
+              boxShadow: `0 -8px 40px rgba(0,0,0,0.7), 0 -2px 0 ${accentCol}33`,
+              pointerEvents: 'auto',
+            }}
+          >
+            {/* Header row */}
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12, gap: 10 }}>
+              <div style={{
+                width: 40, height: 40, borderRadius: 10,
+                background: `${accentCol}22`, border: `1.5px solid ${accentCol}55`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
+              }}>
+                {TOWER_ICONS[upgradeTowerData.type] ?? '🗼'}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ color: '#f0fff0', fontWeight: 800, fontSize: 15, letterSpacing: '-0.01em' }}>
+                  {upgradeTowerData.type}
+                </div>
+                {/* Upgrade level bar */}
+                <div style={{ display: 'flex', gap: 4, marginTop: 4, alignItems: 'center' }}>
+                  {Array.from({ length: maxLvl }).map((_, i) => (
+                    <div key={i} style={{
+                      height: 6, flex: 1, borderRadius: 3,
+                      background: i < lvl ? accentCol : 'rgba(255,255,255,0.12)',
+                      boxShadow: i < lvl ? `0 0 6px ${accentCol}88` : 'none',
+                      transition: 'all 0.2s',
+                    }} />
                   ))}
+                  <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, marginLeft: 4 }}>
+                    {lvl}/{maxLvl}
+                  </span>
                 </div>
               </div>
-            </div>
-            <button onPointerDown={() => selectForUpgrade(null)} style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.6)', borderRadius: 6, padding: '3px 10px', fontSize: 12, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}>
-              סגור
-            </button>
-          </div>
-
-          <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
-            {(() => {
-              const def = TOWER_DEFS[upgradeTowerData.type];
-              if (!def) return null;
-              const dps = def.dps > 0 ? Math.round(def.dps * upgradeTowerData.damageMultiplier * upgradeTowerData.fireRateMultiplier * 10) / 10 : 0;
-              const range = Math.round(def.range * upgradeTowerData.rangeMultiplier);
-              return (
-                <>
-                  {dps > 0 && <Stat label="DPS" value={String(dps)} color="#ff9944" />}
-                  {range > 0 && <Stat label="טווח" value={String(range)} color="#44ccff" />}
-                  <Stat label="רמה" value={`${upgradeTowerData.upgrades}/3`} color="#ffd700" />
-                  {upgradeTowerData.type === 'GlueTrap' && <Stat label="האטה" value="70%" color="#ddaa00" />}
-                  {upgradeTowerData.type === 'BugLight' && <Stat label="נזק+" value="+35%" color="#ffff44" />}
-                </>
-              );
-            })()}
-          </div>
-
-          {upgradeTowerData.upgrades < 3 ? (
-            <div style={{ background: 'rgba(80,200,80,0.08)', border: '1px solid rgba(80,200,80,0.2)', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 11, color: 'rgba(200,255,200,0.7)' }}>
-              <span style={{ color: '#88ee88', fontWeight: 700 }}>שדרוג הבא: </span>
-              +50% נזק &nbsp;·&nbsp; +10% טווח &nbsp;·&nbsp; +20% קצב ירי
-            </div>
-          ) : (
-            <div style={{ background: 'rgba(255,200,0,0.08)', border: '1px solid rgba(255,200,0,0.25)', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 11, color: '#ffd700', textAlign: 'center', fontWeight: 700 }}>
-              ★ שודרג במלואו ★
-            </div>
-          )}
-
-          {upgradeTowerData.upgrades < 3 && (() => {
-            const cost = upgradeTowerData.upgradeCost;
-            const canAfford = state.gold >= cost;
-            return (
               <button
-                disabled={!canAfford}
-                onPointerDown={() => { if (canAfford) upgradeTower(upgradeTowerData.id); }}
+                onPointerDown={() => selectForUpgrade(null)}
+                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.5)', borderRadius: 8, padding: '5px 12px', fontSize: 11, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
+              >✕</button>
+            </div>
+
+            {/* Stats comparison */}
+            <div style={{
+              display: 'grid', gridTemplateColumns: '1fr 1fr',
+              gap: 6, marginBottom: 12,
+            }}>
+              {/* Current stats */}
+              <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '8px 10px', border: '1px solid rgba(255,255,255,0.07)' }}>
+                <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>עכשיו</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {curDps > 0 && <StatRow label="DPS" val={`${curDps}`} col="#ff9944" />}
+                  {curRange > 0 && <StatRow label="טווח" val={`${curRange}`} col="#44ccff" />}
+                  {upgradeTowerData.type === 'GlueTrap' && <StatRow label="האטה" val="70%" col="#ddaa00" />}
+                  {upgradeTowerData.type === 'BugLight' && <StatRow label="נזק×" val="+35%" col="#ffff44" />}
+                </div>
+              </div>
+              {/* Next level or maxed */}
+              <div style={{
+                background: isMaxed ? 'rgba(255,200,0,0.06)' : canUpg ? 'rgba(80,200,80,0.06)' : 'rgba(255,255,255,0.03)',
+                borderRadius: 10, padding: '8px 10px',
+                border: `1px solid ${isMaxed ? 'rgba(255,200,0,0.2)' : canUpg ? 'rgba(80,200,80,0.18)' : 'rgba(255,255,255,0.07)'}`,
+              }}>
+                {isMaxed ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 4 }}>
+                    <div style={{ fontSize: 18 }}>★</div>
+                    <div style={{ color: '#ffd700', fontSize: 10, fontWeight: 700, textAlign: 'center' }}>מקסימום</div>
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>רמה {lvl + 1}</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {nextDps > 0 && <StatRow label="DPS" val={`${nextDps}`} col="#ff9944" arrow={curDps > 0 ? `+${Math.round((nextDps/curDps-1)*100)}%` : undefined} />}
+                      {nextRange > 0 && <StatRow label="טווח" val={`${nextRange}`} col="#44ccff" arrow={curRange > 0 ? `+${Math.round((nextRange/curRange-1)*100)}%` : undefined} />}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div style={{ display: 'flex', gap: 8 }}>
+              {/* Upgrade button */}
+              {!isMaxed && (
+                <button
+                  disabled={!canUpg}
+                  onPointerDown={() => { if (canUpg) upgradeTower(upgradeTowerData.id); }}
+                  style={{
+                    flex: 2, padding: '11px 0', borderRadius: 11,
+                    border: `2px solid ${canUpg ? '#ffd700' : 'rgba(255,255,255,0.08)'}`,
+                    background: canUpg
+                      ? 'linear-gradient(135deg, rgba(200,150,0,0.55), rgba(140,90,0,0.55))'
+                      : 'rgba(255,255,255,0.03)',
+                    color: canUpg ? '#ffd700' : 'rgba(255,255,255,0.2)',
+                    fontSize: 13, fontWeight: 800,
+                    cursor: canUpg ? 'pointer' : 'not-allowed',
+                    WebkitTapHighlightColor: 'transparent',
+                    boxShadow: canUpg ? '0 0 20px rgba(255,200,0,0.25)' : 'none',
+                    transition: 'all 0.15s',
+                    letterSpacing: '0.02em',
+                  }}
+                >
+                  {canUpg ? `⬆ שדרג  $${upgCost}` : `צריך $${upgCost}`}
+                </button>
+              )}
+              {/* Sell button */}
+              <button
+                onPointerDown={() => sellTower(upgradeTowerData.id)}
                 style={{
-                  width: '100%', padding: '10px 0', borderRadius: 10,
-                  border: `2px solid ${canAfford ? '#ffd700' : 'rgba(255,255,255,0.1)'}`,
-                  background: canAfford ? 'linear-gradient(135deg, rgba(180,130,0,0.5), rgba(120,80,0,0.5))' : 'rgba(255,255,255,0.04)',
-                  color: canAfford ? '#ffd700' : 'rgba(255,255,255,0.25)',
-                  fontSize: 14, fontWeight: 700,
-                  cursor: canAfford ? 'pointer' : 'not-allowed',
+                  flex: isMaxed ? 1 : 1, padding: '11px 0', borderRadius: 11,
+                  border: '1.5px solid rgba(220,80,80,0.35)',
+                  background: 'rgba(180,40,40,0.18)',
+                  color: '#ff8888', fontSize: 12, fontWeight: 700,
+                  cursor: 'pointer',
                   WebkitTapHighlightColor: 'transparent',
-                  boxShadow: canAfford ? '0 0 16px rgba(255,200,0,0.2)' : 'none',
                   transition: 'all 0.15s',
                 }}
               >
-                {canAfford ? `⬆ שדרג — $${cost}` : `צריך $${cost} (יש $${state.gold})`}
+                🗑 מכור<br/>
+                <span style={{ fontSize: 11, color: '#ffaaaa', fontWeight: 600 }}>+${sellAmt}</span>
               </button>
-            );
-          })()}
-        </div>
-      )}
+            </div>
+          </div>
+        );
+      })()}
     </>
   );
 }
 
-function Stat({ label, value, color }: { label: string; value: string; color: string }) {
+function StatRow({ label, val, col, arrow }: { label: string; val: string; col: string; arrow?: string }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-      <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</span>
-      <span style={{ color, fontSize: 16, fontWeight: 700, fontFamily: 'monospace' }}>{value}</span>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
+      <span style={{ color: 'rgba(255,255,255,0.38)', fontSize: 10, fontWeight: 600 }}>{label}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+        <span style={{ color: col, fontSize: 12, fontWeight: 700, fontFamily: 'monospace' }}>{val}</span>
+        {arrow && <span style={{ color: '#44ee88', fontSize: 9, fontWeight: 700 }}>{arrow}</span>}
+      </div>
     </div>
   );
 }
+
 
 function hexToRgb(hex: string): string {
   const clean = hex.replace('#', '');
