@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { TOWER_DEFS } from '../game/data/towers';
 
@@ -81,8 +82,25 @@ export function HUD() {
   const {
     state, selectedTower, selectedUpgradeTowerId,
     selectTower, skipBuild, sendNextWave, airStrike, empBlast,
-    selectForUpgrade, upgradeTower, sellTower, setSpeed,
+    selectForUpgrade, upgradeTower, sellTower, setSpeed, initEngine,
   } = useGameStore();
+
+  const [confirmRestart, setConfirmRestart] = useState(false);
+  const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => { if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current); }, []);
+
+  const handleRestartPress = () => {
+    if (confirmRestart) {
+      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
+      setConfirmRestart(false);
+      initEngine();
+    } else {
+      setConfirmRestart(true);
+      confirmTimerRef.current = setTimeout(() => setConfirmRestart(false), 2500);
+    }
+  };
+
   if (!state) return null;
 
   const inBuild = state.phase === 'build';
@@ -126,13 +144,30 @@ export function HUD() {
             <div className="flex items-center gap-1">
               <span style={{ color: '#66aaff', fontWeight: 700, fontSize: 9, letterSpacing: '0.08em' }}>גל</span>
               <span style={{ color: '#88ccff', fontFamily: 'monospace', fontWeight: 700, fontSize: 13 }}>
-                {state.wave}<span style={{ color: 'rgba(100,160,255,0.4)', fontSize: 11 }}>/10</span>
+                {state.wave}
               </span>
             </div>
           </div>
 
           {/* Actions */}
           <div className="flex items-center gap-1.5">
+            {/* Restart button */}
+            <button
+              onPointerDown={handleRestartPress}
+              style={{
+                background: confirmRestart ? 'rgba(220,50,50,0.85)' : 'rgba(60,60,60,0.5)',
+                border: `1px solid ${confirmRestart ? '#ff4444' : 'rgba(255,255,255,0.12)'}`,
+                color: confirmRestart ? '#fff' : 'rgba(255,255,255,0.45)',
+                borderRadius: 6, fontSize: confirmRestart ? 9 : 13, fontWeight: 700,
+                padding: '4px 7px', minHeight: 28, cursor: 'pointer',
+                WebkitTapHighlightColor: 'transparent',
+                transition: 'all 0.15s',
+                whiteSpace: 'nowrap',
+                boxShadow: confirmRestart ? '0 0 10px rgba(255,60,60,0.5)' : 'none',
+              }}
+            >
+              {confirmRestart ? 'בטוח?' : '↺'}
+            </button>
             {inBuild && (
               <span className="flex items-center gap-1" style={{ color: '#44ee88', fontWeight: 600, fontSize: 10 }}>
                 <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: '#44ee88' }} />

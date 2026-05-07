@@ -455,8 +455,17 @@ export class Renderer {
       8:  ['גל 8 🪲💥',        'טרמיטים. הם אוהבים עץ. והכל.',        0xffffff],
       9:  ['גל 9 😤',          'כמעט... כמעט... אל תיכנע!!!',          0xff9944],
       10: ['👑 המלכה הגיעה! 👑','עכשיו זה אישי. קרב אחרון!',           0xff2020],
+      11: ['גל 11 — הם חזרו!',   'חשבת שזה נגמר? תמים.',                0xff9944],
+      12: ['גל 12 💀',           'יותר, מהר יותר, כועסים יותר.',        0xff6644],
+      15: ['🔥 גל 15! 🔥',       'שליש דרך לאגדה. אולי.',               0xff5500],
+      20: ['⚡ גל 20! ⚡',        '20 גלים?! הנמלים כותבות ספר עלייך.', 0xffcc00],
+      25: ['💀 גל 25 💀',         'הבית שלך מחוזק. הנמלים — מוטרפות.',  0xff2020],
+      30: ['👑 גל 30! 👑',        'אגדת מטבח. הנמלים עייפות. קצת.',     0xffd700],
+      40: ['🐜💥 גל 40! 💥🐜',   'כבר לא מלחמה — זו מסורת.',           0xff4400],
+      50: ['🏆 גל 50!! 🏆',       'חמישים גלים. תקשר עם נאס"א.',        0xffd700],
     };
-    const [label, sub, color] = WAVE_TEXT[waveNum] ?? [`גל ${waveNum}`, '', 0xffffff];
+    const milestone = [50,40,30,25,20,15,12,11].find(m => waveNum === m);
+    const [label, sub, color] = WAVE_TEXT[milestone ?? waveNum] ?? [`גל ${waveNum} 🐜`, 'הם לא מוותרים.', 0xff7744];
 
     const t = new Text({ text: label, style: {
       fontFamily: 'Arial Black, Arial',
@@ -632,6 +641,20 @@ export class Renderer {
     ring.setStrokeStyle({ width: 1, color: 0xffffff, alpha: 0.08 });
     ring.circle(0, 0, range).stroke();
     cont.addChild(ring);
+
+    // Drop shadow
+    const shadow = new Graphics();
+    shadow.ellipse(3, 5, TILE * 0.46, TILE * 0.22).fill({ color: 0x000000, alpha: 0.38 });
+    cont.addChild(shadow);
+
+    // Stone platform base
+    const platform = new Graphics();
+    platform.circle(0, 0, TILE * 0.5).fill({ color: 0x8a8878 });
+    platform.circle(0, 0, TILE * 0.46).fill({ color: 0x9c9a88 });
+    platform.circle(-TILE*0.14, -TILE*0.14, TILE*0.12).fill({ color: 0xb0ae9c, alpha: 0.5 });
+    platform.setStrokeStyle({ width: 1.5, color: 0x555548, alpha: 0.7 });
+    platform.circle(0, 0, TILE * 0.5).stroke();
+    cont.addChild(platform);
 
     const base = new Graphics();
     const R = TILE * 0.42;
@@ -871,6 +894,8 @@ export class Renderer {
       if (sp.flashTimer > 0) {
         sp.flashTimer -= dt;
         sp.body.tint = sp.flashTimer > FLASH_DUR * 0.5 ? 0xffffff : 0xff2222;
+      } else if (en.isFrozen) {
+        sp.body.tint = 0x88ccff;
       } else { sp.body.tint = 0xffffff; }
 
       // Bob
