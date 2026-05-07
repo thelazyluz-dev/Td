@@ -13,16 +13,10 @@ export function GameCanvas() {
   const { state, placeTower, selectedTower, selectedUpgradeTowerId, selectForUpgrade } = useGameStore();
   stateRef.current = state ?? null;
 
-  // Stable refs so PixiJS closures always see the latest values
   const selectForUpgradeRef = useRef(selectForUpgrade);
   selectForUpgradeRef.current = selectForUpgrade;
   const selectedTowerRef = useRef(selectedTower);
   selectedTowerRef.current = selectedTower;
-
-  // Set to true for a short window after a tower is tapped, so the DOM
-  // placement handler ignores the same gesture.
-  const towerJustTappedRef = useRef(false);
-  const towerTapTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useGameEvents(rendererRef);
 
@@ -31,13 +25,7 @@ export function GameCanvas() {
     const renderer = new Renderer();
     rendererRef.current = renderer;
     renderer.init(containerRef.current).then(() => {
-      renderer.setTowerTapHandler((id) => {
-        // Block the DOM placement handler for this gesture
-        towerJustTappedRef.current = true;
-        if (towerTapTimerRef.current) clearTimeout(towerTapTimerRef.current);
-        towerTapTimerRef.current = setTimeout(() => { towerJustTappedRef.current = false; }, 200);
-        selectForUpgradeRef.current(id);
-      });
+      renderer.setTowerTapHandler((id) => selectForUpgradeRef.current(id));
       renderer.setEmptyTapHandler(() => selectForUpgradeRef.current(null));
     });
 
@@ -51,12 +39,7 @@ export function GameCanvas() {
     };
     rafId = requestAnimationFrame(loop);
 
-    return () => {
-      cancelAnimationFrame(rafId);
-      renderer.destroy();
-      rendererRef.current = null;
-      if (towerTapTimerRef.current) clearTimeout(towerTapTimerRef.current);
-    };
+    return () => { cancelAnimationFrame(rafId); renderer.destroy(); rendererRef.current = null; };
   }, []);
 
   useEffect(() => {
@@ -67,17 +50,27 @@ export function GameCanvas() {
     rendererRef.current?.setPlacementMode(selectedTower !== null);
   }, [selectedTower]);
 
-  const handlePlacement = (clientX: number, clientY: number) => {
-    // Skip if a tower sprite was just tapped (same gesture would otherwise place a new tower)
-    if (towerJustTappedRef.current) return;
-    if (!selectedTowerRef.current) return;
+  const handleTap = (clientX: number, clientY: number) => {
     const renderer = rendererRef.current;
     const s = stateRef.current;
     if (!renderer || !s) return;
     if (s.phase !== 'build' && s.phase !== 'wave') return;
+
     const { x, y } = renderer.toGameCoords(clientX, clientY);
     const col = Math.floor(x / TILE);
     const row = Math.floor(y / TILE);
+
+    // If there is already a tower in this grid cell, open its upgrade panel
+    const hit = s.towers.find(
+      t => Math.floor(t.pos.x / TILE) === col && Math.floor(t.pos.y / TILE) === row
+    );
+    if (hit) {
+      selectForUpgradeRef.current(hit.id);
+      return;
+    }
+
+    // Otherwise place a new tower (only if one is selected from the shop)
+    if (!selectedTowerRef.current) return;
     if (isCellOnPath(col, row, TILE)) return;
     placeTower({ x: col * TILE + TILE / 2, y: row * TILE + TILE / 2 });
   };
@@ -85,11 +78,11 @@ export function GameCanvas() {
   return (
     <div
       ref={containerRef}
-      onClick={e => handlePlacement(e.clientX, e.clientY)}
+      onClick={e => handleTap(e.clientX, e.clientY)}
       onTouchEnd={e => {
         e.preventDefault();
         const t = e.changedTouches[0];
-        if (t) handlePlacement(t.clientX, t.clientY);
+        if (t) handleTap(t.clientX, t.clientY);
       }}
       style={{
         position: 'absolute',
