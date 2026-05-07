@@ -1,4 +1,4 @@
-import { Application, Graphics, Container, Text } from 'pixi.js';
+import { Application, Graphics, Container, Text, Rectangle } from 'pixi.js';
 import type { GameState } from './GameEngine';
 import { PATH_WAYPOINTS } from './PathManager';
 import { BALANCE } from '../balance';
@@ -129,6 +129,11 @@ export class Renderer {
   // Selected tower for upgrade highlight
   private selectedTowerId: number | null = null;
 
+  // Tower interaction callbacks
+  private onTowerTap: ((id: number) => void) | null = null;
+  private onEmptyTap: (() => void) | null = null;
+  private _placementMode = false;
+
   // Wave banner
   private banner: Text | null = null;
   private bannerSub: Text | null = null;
@@ -159,6 +164,13 @@ export class Renderer {
     );
 
     this.drawPath();
+
+    // Stage background tap → deselect tower (only when not in placement mode)
+    this.app.stage.eventMode = 'static';
+    this.app.stage.hitArea = new Rectangle(0, 0, CANVAS_W, CANVAS_H);
+    this.app.stage.on('pointerdown', () => {
+      if (!this._placementMode) this.onEmptyTap?.();
+    });
 
     // Use PixiJS renderer resize event (fires when resizeTo detects size change)
     this.app.renderer.on('resize', this._onResize);
@@ -408,6 +420,10 @@ export class Renderer {
     this.selectedTowerId = id;
   }
 
+  setTowerTapHandler(fn: (id: number) => void): void { this.onTowerTap = fn; }
+  setEmptyTapHandler(fn: () => void): void { this.onEmptyTap = fn; }
+  setPlacementMode(active: boolean): void { this._placementMode = active; }
+
   private tickShake(dt: number): void {
     if (!this.app) return;
     if (this.shakeDur > 0) {
@@ -503,6 +519,14 @@ export class Renderer {
         sp = this.makeTower(tower.type, tower.effectiveRange);
         sp.container.position.set(tower.pos.x, tower.pos.y);
         sp.container.scale.set(0);
+        // Make tower tappable via PixiJS hit testing
+        sp.container.eventMode = 'static';
+        sp.container.hitArea = new Rectangle(-TILE * 0.6, -TILE * 0.6, TILE * 1.2, TILE * 1.2);
+        const towerId = tower.id;
+        sp.container.on('pointerdown', (e) => {
+          e.stopPropagation();
+          this.onTowerTap?.(towerId);
+        });
         this.towerLayer.addChild(sp.container);
         this.towerSprites.set(tower.id, sp);
       }

@@ -13,6 +13,12 @@ export function GameCanvas() {
   const { state, placeTower, selectedTower, selectedUpgradeTowerId, selectForUpgrade } = useGameStore();
   stateRef.current = state ?? null;
 
+  // Keep refs so callbacks in PixiJS closures always see latest values
+  const selectForUpgradeRef = useRef(selectForUpgrade);
+  selectForUpgradeRef.current = selectForUpgrade;
+  const selectedTowerRef = useRef(selectedTower);
+  selectedTowerRef.current = selectedTower;
+
   // Sound + shake + wave banner driven by state diffs
   useGameEvents(rendererRef);
 
@@ -21,7 +27,11 @@ export function GameCanvas() {
     if (!containerRef.current) return;
     const renderer = new Renderer();
     rendererRef.current = renderer;
-    renderer.init(containerRef.current);
+    renderer.init(containerRef.current).then(() => {
+      // Wire PixiJS tower interaction after init completes
+      renderer.setTowerTapHandler((id) => selectForUpgradeRef.current(id));
+      renderer.setEmptyTapHandler(() => selectForUpgradeRef.current(null));
+    });
 
     let rafId: number;
     let lastTs = performance.now();
@@ -36,12 +46,19 @@ export function GameCanvas() {
     return () => { cancelAnimationFrame(rafId); renderer.destroy(); rendererRef.current = null; };
   }, []);
 
-  // Sync selected tower to renderer for highlight ring
+  // Sync selected tower highlight ring
   useEffect(() => {
     rendererRef.current?.setSelectedTower(selectedUpgradeTowerId ?? null);
   }, [selectedUpgradeTowerId]);
 
+  // Sync placement mode so PixiJS stage tap doesn't deselect while placing
+  useEffect(() => {
+    rendererRef.current?.setPlacementMode(selectedTower !== null);
+  }, [selectedTower]);
+
+  // handleClick only handles tower placement — tower selection is via PixiJS
   const handleClick = (clientX: number, clientY: number) => {
+    if (!selectedTowerRef.current) return;
     const renderer = rendererRef.current;
     if (!renderer) return;
     const currentState = stateRef.current;
@@ -49,28 +66,10 @@ export function GameCanvas() {
     if (currentState.phase !== 'build' && currentState.phase !== 'wave') return;
 
     const { x, y } = renderer.toGameCoords(clientX, clientY);
-
-    if (selectedTower) {
-      // Place tower — allowed during both build and wave phases
-      const col = Math.floor(x / TILE);
-      const row = Math.floor(y / TILE);
-      if (isCellOnPath(col, row, TILE)) return;
-      placeTower({ x: col * TILE + TILE / 2, y: row * TILE + TILE / 2 });
-    } else {
-      // Tap on existing tower to open upgrade/sell panel
-      const clickRadius = TILE * 0.65;
-      let found = false;
-      for (const tower of currentState.towers) {
-        const dx = x - tower.pos.x;
-        const dy = y - tower.pos.y;
-        if (Math.hypot(dx, dy) <= clickRadius) {
-          selectForUpgrade(tower.id);
-          found = true;
-          break;
-        }
-      }
-      if (!found) selectForUpgrade(null);
-    }
+    const col = Math.floor(x / TILE);
+    const row = Math.floor(y / TILE);
+    if (isCellOnPath(col, row, TILE)) return;
+    placeTower({ x: col * TILE + TILE / 2, y: row * TILE + TILE / 2 });
   };
 
   return (
