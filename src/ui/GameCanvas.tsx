@@ -10,7 +10,7 @@ export function GameCanvas() {
   const rendererRef  = useRef<Renderer | null>(null);
   const stateRef     = useRef<GameState | null>(null);
 
-  const { state, placeTower, selectedTower, selectForUpgrade } = useGameStore();
+  const { state, placeTower, selectedTower, selectedUpgradeTowerId, selectForUpgrade } = useGameStore();
   stateRef.current = state ?? null;
 
   // Sound + shake + wave banner driven by state diffs
@@ -36,23 +36,29 @@ export function GameCanvas() {
     return () => { cancelAnimationFrame(rafId); renderer.destroy(); rendererRef.current = null; };
   }, []);
 
+  // Sync selected tower to renderer for highlight ring
+  useEffect(() => {
+    rendererRef.current?.setSelectedTower(selectedUpgradeTowerId ?? null);
+  }, [selectedUpgradeTowerId]);
+
   const handleClick = (clientX: number, clientY: number) => {
     const renderer = rendererRef.current;
     if (!renderer) return;
     const currentState = stateRef.current;
-    if (!currentState || currentState.phase !== 'build') return;
+    if (!currentState) return;
+    if (currentState.phase !== 'build' && currentState.phase !== 'wave') return;
 
     const { x, y } = renderer.toGameCoords(clientX, clientY);
 
     if (selectedTower) {
-      // Place tower mode
+      // Place tower — allowed during both build and wave phases
       const col = Math.floor(x / TILE);
       const row = Math.floor(y / TILE);
       if (isCellOnPath(col, row, TILE)) return;
       placeTower({ x: col * TILE + TILE / 2, y: row * TILE + TILE / 2 });
     } else {
-      // Check if clicking on an existing tower for upgrade
-      const clickRadius = TILE * 0.5;
+      // Tap on existing tower to open upgrade/sell panel
+      const clickRadius = TILE * 0.65;
       let found = false;
       for (const tower of currentState.towers) {
         const dx = x - tower.pos.x;
@@ -63,10 +69,7 @@ export function GameCanvas() {
           break;
         }
       }
-      if (!found) {
-        // Clicked empty space — deselect upgrade panel
-        selectForUpgrade(null);
-      }
+      if (!found) selectForUpgrade(null);
     }
   };
 
@@ -85,7 +88,7 @@ export function GameCanvas() {
         touchAction: 'none',
         userSelect: 'none',
         WebkitUserSelect: 'none',
-        cursor: (selectedTower && state?.phase === 'build') ? 'crosshair' : 'default',
+        cursor: selectedTower ? 'crosshair' : 'default',
       }}
     />
   );

@@ -70,6 +70,8 @@ interface TowerSprite {
   recoilMax: number;
   upgradeLevel: number;
   starsContainer: Container;
+  selRing: Graphics;
+  selTime: number;
 }
 
 interface Trail {
@@ -123,6 +125,9 @@ export class Renderer {
   private shakeAmt  = 0;
   private shakeDur  = 0;
   private shakeMax  = 0;
+
+  // Selected tower for upgrade highlight
+  private selectedTowerId: number | null = null;
 
   // Wave banner
   private banner: Text | null = null;
@@ -399,6 +404,10 @@ export class Renderer {
     this.shakeMax = duration;
   }
 
+  setSelectedTower(id: number | null): void {
+    this.selectedTowerId = id;
+  }
+
   private tickShake(dt: number): void {
     if (!this.app) return;
     if (this.shakeDur > 0) {
@@ -541,6 +550,24 @@ export class Renderer {
       if (tower.upgrades !== sp.upgradeLevel) {
         sp.upgradeLevel = tower.upgrades;
         this.updateStars(sp, tower.upgrades);
+      }
+
+      // Selection ring (pulsing gold when selected for upgrade/sell)
+      const isSelected = tower.id === this.selectedTowerId;
+      if (isSelected) {
+        sp.selTime += dt;
+        const pulse = 0.55 + 0.45 * Math.sin(sp.selTime * 5.5);
+        sp.selRing.clear();
+        // Range arc (visible when selected)
+        sp.selRing.setStrokeStyle({ width: 1.5, color: 0x88ddff, alpha: 0.55 * pulse });
+        sp.selRing.circle(0, 0, tower.effectiveRange).stroke();
+        // Gold selection circle
+        sp.selRing.setStrokeStyle({ width: 3.5, color: 0xffd700, alpha: 0.9 * pulse });
+        sp.selRing.circle(0, 0, TILE * 0.62).stroke();
+        sp.selRing.circle(0, 0, TILE * 0.62).fill({ color: 0xffd700, alpha: 0.08 * pulse });
+      } else {
+        sp.selTime = 0;
+        sp.selRing.clear();
       }
     }
 
@@ -708,11 +735,16 @@ export class Renderer {
     const starsContainer = new Container();
     cont.addChild(starsContainer);
 
+    // Selection ring (drawn dynamically in syncTowers, on top of everything)
+    const selRing = new Graphics();
+    cont.addChild(selRing);
+
     return {
       container: cont, barrel, muzzle,
       muzzleTimer: 0, angle: -Math.PI/2,
       popTimer: SPAWN_DUR, recoilTimer: 0, recoilMax: RECOIL_DUR,
       upgradeLevel: 0, starsContainer,
+      selRing, selTime: 0,
     };
   }
 
@@ -1251,12 +1283,16 @@ export class Renderer {
     for (const proj of state.projectiles) {
       if (!this.trails.has(proj.id)) {
         this.triggerMuzzle(proj.towerId);
+        const towerType  = state.towers.find(t => t.id === proj.towerId)?.type ?? '';
+        const trailColor = TC[towerType] ?? 0xffdd44;
+        const headColor  = adjustColor(trailColor, 1.7);
         const cont  = new Container();
         const dots: Graphics[] = [];
         for (let i = 0; i < TRAIL_LEN; i++) {
           const g = new Graphics();
-          const ri = Math.max(1, 3.5 - i * 0.45);
-          g.circle(0, 0, ri).fill({ color: i === 0 ? 0xffffff : i === 1 ? 0xffffaa : 0xffdd44 });
+          const ri = Math.max(1, 4 - i * 0.5);
+          const dotColor = i === 0 ? 0xffffff : i === 1 ? headColor : trailColor;
+          g.circle(0, 0, ri).fill({ color: dotColor });
           g.alpha = 0;
           cont.addChild(g);
           dots.push(g);
@@ -1310,17 +1346,29 @@ export class Renderer {
 
   private spawnDmgNum(x: number, y: number, value: number): void {
     if (this.dmgNums.length >= 30) return;
-    const big = value >= 20;
-    const t = new Text({ text: String(value), style: {
+    const BIG_QUIPS   = ['בום!', 'קבל!', 'אוי!', 'פגיעה!'];
+    const HUGE_QUIPS  = ['💥' + value, '☠️' + value, '🔥' + value, 'צ׳וואק! ' + value];
+    const isBig  = value >= 20;
+    const isHuge = value >= 50;
+    const label  = isHuge
+      ? HUGE_QUIPS[Math.floor(Math.random() * HUGE_QUIPS.length)]
+      : (isBig && Math.random() < 0.45)
+        ? BIG_QUIPS[Math.floor(Math.random() * BIG_QUIPS.length)]
+        : String(value);
+    const baseStyle = {
       fontFamily: 'Arial Black, Arial',
-      fontSize: big ? 15 : 12,
-      fontWeight: '900',
-      fill: big ? 0xff6644 : 0xffffff,
-    }});
+      fontSize: isHuge ? 18 : isBig ? 15 : 11,
+      fontWeight: '900' as const,
+      fill: isHuge ? 0xff3300 : isBig ? 0xff7744 : 0xffffff,
+    };
+    const style = isBig
+      ? { ...baseStyle, dropShadow: { alpha: 0.8, angle: Math.PI / 2, blur: 3, color: 0x000000, distance: 2 } }
+      : baseStyle;
+    const t = new Text({ text: label, style });
     t.anchor.set(0.5, 1);
-    t.position.set(x, y);
+    t.position.set(x + (Math.random() - 0.5) * 12, y);
     this.uiLayer.addChild(t);
-    this.dmgNums.push({ text: t, vy: -65, life: 0.75, maxLife: 0.75 });
+    this.dmgNums.push({ text: t, vy: -(70 + (isHuge ? 25 : isBig ? 12 : 0)), life: 0.85, maxLife: 0.85 });
   }
 
   private tickDmgNums(dt: number): void {
