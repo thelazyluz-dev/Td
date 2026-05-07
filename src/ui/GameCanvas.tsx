@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Renderer, CANVAS_W, CANVAS_H, TILE } from '../game/engine/Renderer';
 import { useGameStore } from '../store/gameStore';
 import { isCellOnPath } from '../game/engine/PathManager';
+import { useGameEvents } from '../utils/useGameEvents';
 import type { GameState } from '../game/engine/GameEngine';
 
 export function GameCanvas() {
@@ -12,7 +13,10 @@ export function GameCanvas() {
   const { state, placeTower, selectedTower } = useGameStore();
   stateRef.current = state ?? null;
 
-  // Init PixiJS once + own RAF loop
+  // Sound + shake + wave banner driven by state diffs
+  useGameEvents(rendererRef);
+
+  // Init PixiJS + own RAF loop (decoupled from React)
   useEffect(() => {
     if (!containerRef.current) return;
     const renderer = new Renderer();
@@ -32,14 +36,12 @@ export function GameCanvas() {
     return () => { cancelAnimationFrame(rafId); renderer.destroy(); rendererRef.current = null; };
   }, []);
 
-  // Convert any client {x,y} → game grid cell.
-  // getBoundingClientRect already reflects CSS scale applied by parent,
-  // so normalizing by rect dimensions always yields correct game coords.
+  // Convert screen coords → game cell, works at any CSS scale
   const toGameCell = (clientX: number, clientY: number) => {
     const rect = containerRef.current!.getBoundingClientRect();
-    const gameX = ((clientX - rect.left) / rect.width)  * CANVAS_W;
-    const gameY = ((clientY - rect.top)  / rect.height) * CANVAS_H;
-    return { col: Math.floor(gameX / TILE), row: Math.floor(gameY / TILE) };
+    const gx = ((clientX - rect.left) / rect.width)  * CANVAS_W;
+    const gy = ((clientY - rect.top)  / rect.height) * CANVAS_H;
+    return { col: Math.floor(gx / TILE), row: Math.floor(gy / TILE) };
   };
 
   const tryPlace = (clientX: number, clientY: number) => {
@@ -49,26 +51,16 @@ export function GameCanvas() {
     placeTower({ x: col * TILE + TILE / 2, y: row * TILE + TILE / 2 });
   };
 
-  const handleClick = (e: React.MouseEvent) => tryPlace(e.clientX, e.clientY);
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    e.preventDefault(); // prevent ghost click + scroll
-    const t = e.changedTouches[0];
-    if (t) tryPlace(t.clientX, t.clientY);
-  };
-
-  const canPlace = selectedTower && state?.phase === 'build';
-
   return (
     <div
       ref={containerRef}
-      onClick={handleClick}
-      onTouchEnd={handleTouchEnd}
+      onClick={e => tryPlace(e.clientX, e.clientY)}
+      onTouchEnd={e => { e.preventDefault(); const t = e.changedTouches[0]; if (t) tryPlace(t.clientX, t.clientY); }}
       style={{
         width: CANVAS_W,
         height: CANVAS_H,
-        cursor: canPlace ? 'crosshair' : 'default',
-        touchAction: 'none',   // prevent browser scroll/zoom on touch
+        cursor: (selectedTower && state?.phase === 'build') ? 'crosshair' : 'default',
+        touchAction: 'none',
         userSelect: 'none',
         WebkitUserSelect: 'none',
       }}

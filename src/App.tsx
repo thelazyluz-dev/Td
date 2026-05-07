@@ -7,16 +7,11 @@ import { useGameScale, GAME_W, GAME_H } from './utils/useScale';
 
 function PortraitWarning() {
   return (
-    <div className="fixed inset-0 bg-gray-950 flex flex-col items-center justify-center gap-6 z-[999]">
-      <div className="text-6xl animate-bounce">📱</div>
-      <div className="text-center px-8">
-        <p className="text-white font-bold text-xl mb-2">Rotate your device</p>
-        <p className="text-white/40 text-sm">Last Stand is best played in landscape mode</p>
-      </div>
-      <div className="flex items-center gap-2 text-white/20 text-xs">
-        <span>◀</span>
-        <span className="border border-white/10 rounded px-3 py-1">Landscape</span>
-        <span>▶</span>
+    <div style={{ position: 'fixed', inset: 0, background: '#050505', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20, zIndex: 999 }}>
+      <div style={{ fontSize: 56 }} className="animate-bounce">📱</div>
+      <div style={{ textAlign: 'center', padding: '0 32px' }}>
+        <p style={{ color: '#fff', fontWeight: 700, fontSize: 18, margin: 0 }}>Rotate your device</p>
+        <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13, margin: '6px 0 0' }}>Last Stand requires landscape mode</p>
       </div>
     </div>
   );
@@ -27,21 +22,27 @@ export default function App() {
   const { scale, isPortrait } = useGameScale();
 
   if (isPortrait) return <PortraitWarning />;
+  if (!state)     return <MainMenu />;
 
-  if (!state) return <MainMenu />;
-
-  // Outer div fills the viewport; inner div is the fixed 800×500 game, CSS-scaled
   return (
-    <div style={{ width: '100vw', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#030712', overflow: 'hidden' }}>
-      {/* Atmosphere glow */}
+    // position:fixed ensures it's relative to the visual viewport, not the document —
+    // critical on mobile where 100vh ≠ actual visible height
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: '#050505',
+      overflow: 'hidden',
+    }}>
+      {/* Red atmosphere behind canvas */}
       <div style={{
-        position: 'absolute',
-        inset: 0,
-        background: 'radial-gradient(ellipse at 50% 50%, rgba(120,0,0,0.12) 0%, transparent 70%)',
-        pointerEvents: 'none',
+        position: 'absolute', inset: 0, pointerEvents: 'none',
+        background: 'radial-gradient(ellipse at 50% 50%, rgba(100,0,0,0.15) 0%, transparent 65%)',
       }} />
 
-      {/* Scaled game container */}
+      {/* The entire game at computed scale */}
       <div style={{
         width: GAME_W,
         height: GAME_H,
@@ -49,10 +50,10 @@ export default function App() {
         transformOrigin: 'center center',
         position: 'relative',
         flexShrink: 0,
-        borderRadius: 8,
+        borderRadius: 6,
         overflow: 'hidden',
-        boxShadow: '0 0 60px rgba(0,0,0,0.8)',
-        border: '1px solid rgba(255,255,255,0.05)',
+        border: '1px solid rgba(255,255,255,0.06)',
+        boxShadow: '0 0 80px rgba(0,0,0,0.9)',
       }}>
         <GameCanvas />
         <HUD />
