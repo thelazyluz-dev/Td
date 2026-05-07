@@ -114,9 +114,8 @@ export class GameEngine {
     this.emit();
   }
 
-  private tickBuild(dt: number) {
-    this.buildTimer -= dt;
-    if (this.buildTimer <= 0) this.beginWave();
+  private tickBuild(_dt: number) {
+    // Build phase waits for player to press Ready — no auto-countdown
   }
 
   private beginWave() {

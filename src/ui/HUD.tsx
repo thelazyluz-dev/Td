@@ -2,26 +2,25 @@ import { useGameStore } from '../store/gameStore';
 import { TOWER_DEFS } from '../game/data/towers';
 
 const TOWER_ICONS: Record<string, string> = {
-  Rifleman:    '🔫',
-  Shotgunner:  '💥',
-  Sniper:      '🎯',
-  MachineGun:  '⚡',
-  Flamethrower:'🔥',
-  Mortar:      '💣',
-  BarbedWire:  '🪝',
-  Watchtower:  '👁',
+  BugSpray:  '🪲',
+  Swatter:   '🥊',
+  Zapper:    '⚡',
+  Sprinkler: '💦',
+  MagGlass:  '🔆',
+  PoisonBomb:'☠️',
+  GlueTrap:  '🍯',
+  BugLight:  '💡',
 };
 
-// Tower accent colors (CSS hex strings matching TC in Renderer)
 const TOWER_COLORS: Record<string, string> = {
-  Rifleman:    '#44aaff',
-  Shotgunner:  '#ff7722',
-  Sniper:      '#22ffee',
-  MachineGun:  '#ff3344',
-  Flamethrower:'#ff9900',
-  Mortar:      '#8899cc',
-  BarbedWire:  '#eecc22',
-  Watchtower:  '#44ee88',
+  BugSpray:  '#44aaff',
+  Swatter:   '#ff7722',
+  Zapper:    '#ffee00',
+  Sprinkler: '#44cc88',
+  MagGlass:  '#ffaa00',
+  PoisonBomb:'#88cc00',
+  GlueTrap:  '#ddaa00',
+  BugLight:  '#ffff44',
 };
 
 export function HUD() {
@@ -93,8 +92,8 @@ export function HUD() {
               </span>
             )}
             {inBuild && (
-              <button onPointerDown={() => skipBuild()} style={{ background: 'rgba(60,180,80,0.2)', border: '1px solid rgba(80,220,80,0.3)', color: '#88ee88', borderRadius: 5, fontSize: 10, padding: '3px 8px', minHeight: 26, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}>
-                Skip →
+              <button onPointerDown={() => skipBuild()} style={{ background: '#16a34a', border: '1px solid #22c55e', color: '#fff', borderRadius: 6, fontSize: 11, fontWeight: 700, padding: '4px 12px', minHeight: 28, cursor: 'pointer', WebkitTapHighlightColor: 'transparent', boxShadow: '0 0 8px rgba(34,197,94,0.5)' }}>
+                ▶ מוכן!
               </button>
             )}
             {state.airStrikeCharges > 0 && (

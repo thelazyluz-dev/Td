@@ -10,32 +10,32 @@ export const TILE = BALANCE.TILE_SIZE;
 // ── Color tables ────────────────────────────────────────────────────────────
 
 const EC: Record<string, number> = {
-  Walker:      0x44ee44,
-  Runner:      0x88ff22,
-  Tank:        0xaaaa33,
-  Spitter:     0x22ddaa,
-  Crawler:     0x22aa55,
-  Screamer:    0xff9900,
-  Bloater:     0xcc44ff,
-  Alpha:       0xff7700,
-  PatientZero: 0xff2222,
+  Ant:      0xcc8833,
+  Fly:      0x88bb44,
+  Roach:    0x664422,
+  Mosquito: 0x779944,
+  Beetle:   0x3366cc,
+  Wasp:     0xffcc00,
+  Termite:  0xddcc88,
+  FireAnt:  0xff5500,
+  QueenAnt: 0xff2200,
 };
 
 const TC: Record<string, number> = {
-  Rifleman:    0x44aaff,
-  Shotgunner:  0xff7722,
-  Sniper:      0x22ffee,
-  MachineGun:  0xff3344,
-  Flamethrower:0xff9900,
-  Mortar:      0x8899cc,
-  BarbedWire:  0xeecc22,
-  Watchtower:  0x44ee88,
+  BugSpray:   0x44aaff,
+  Swatter:    0xff7722,
+  Zapper:     0xffee00,
+  Sprinkler:  0x44cc88,
+  MagGlass:   0xffaa00,
+  PoisonBomb: 0x88cc00,
+  GlueTrap:   0xddaa00,
+  BugLight:   0xffff44,
 };
 
 function enemyRadius(t: string): number {
-  if (t === 'PatientZero') return 19;
-  if (t === 'Alpha')       return 16;
-  if (t === 'Tank' || t === 'Bloater') return 13;
+  if (t === 'QueenAnt') return 19;
+  if (t === 'FireAnt')  return 16;
+  if (t === 'Roach' || t === 'Termite') return 13;
   return 9;
 }
 
@@ -465,30 +465,38 @@ export class Renderer {
     const base = new Graphics();
     const half = TILE * 0.38;
     switch (type) {
-      case 'Sniper':
+      case 'Zapper':
         base.poly([-half*0.7,-half, half*0.7,-half, half,-0, half*0.7,half, -half*0.7,half, -half,0]).fill({ color });
         break;
-      case 'Mortar':
+      case 'PoisonBomb':
         base.circle(0, 0, TILE*0.42).fill({ color });
-        base.circle(0, 0, TILE*0.28).fill({ color: 0x555577 });
+        base.circle(0, 0, TILE*0.28).fill({ color: 0x225500 });
+        // skull mark
+        base.circle(0, -TILE*0.08, TILE*0.12).fill({ color: 0x000000, alpha: 0.5 });
         break;
-      case 'BarbedWire': {
-        base.setStrokeStyle({ width: 4, color: 0xeecc22 });
+      case 'GlueTrap': {
+        // Honeycomb/sticky cross
+        base.setStrokeStyle({ width: 4, color: 0xddaa00 });
         [-45,-135,45,135].forEach(a => {
           const rad = a * Math.PI/180;
           base.moveTo(0,0).lineTo(Math.cos(rad)*TILE*0.45, Math.sin(rad)*TILE*0.45);
         });
         base.stroke();
-        base.circle(0,0,4).fill({ color: 0xffff88 });
+        base.circle(0,0,5).fill({ color: 0xffee88 });
         break;
       }
-      case 'Watchtower':
+      case 'BugLight':
         base.roundRect(-half*0.55, -half*1.1, half*1.1, half*2.2, 3).fill({ color });
         base.roundRect(-half*0.7, half*0.5, half*1.4, half*0.8, 2).fill({ color: adjustColor(color, 0.8) });
+        // light glow
+        base.circle(0, -half*0.5, half*0.5).fill({ color: 0xffffaa, alpha: 0.4 });
         break;
-      case 'Flamethrower':
+      case 'MagGlass':
         base.circle(0, 0, TILE*0.38).fill({ color });
-        base.circle(0, 0, TILE*0.23).fill({ color: adjustColor(color, 0.7) });
+        base.circle(0, 0, TILE*0.25).fill({ color: 0xffffff, alpha: 0.25 });
+        base.circle(0, 0, TILE*0.38).fill({ color: adjustColor(color, 0.7), alpha: 0.0 });
+        base.setStrokeStyle({ width: 2.5, color: adjustColor(color, 0.6) });
+        base.circle(0, 0, TILE*0.38).stroke();
         break;
       default:
         base.roundRect(-half, -half, half*2, half*2, 5).fill({ color });
@@ -503,7 +511,7 @@ export class Renderer {
 
     // Barrel container (rotates)
     const barrel = new Container();
-    if (type !== 'BarbedWire' && type !== 'Watchtower') {
+    if (type !== 'GlueTrap' && type !== 'BugLight') {
       const bG = new Graphics();
       this.drawBarrel(bG, type);
       barrel.addChild(bG);
@@ -531,30 +539,39 @@ export class Renderer {
 
   private drawBarrel(g: Graphics, type: string): void {
     switch (type) {
-      case 'Shotgunner':
-        g.roundRect(-5, -TILE*0.38, 10, TILE*0.34, 2).fill({ color: 0xdddddd });
-        g.poly([-8, -TILE*0.38, 8, -TILE*0.38, 11, -TILE*0.47, -11, -TILE*0.47]).fill({ color: 0xcccccc });
+      case 'Swatter':
+        // Wide flat swatter head
+        g.roundRect(-7, -TILE*0.38, 14, TILE*0.34, 2).fill({ color: 0xdd9944 });
+        g.poly([-9, -TILE*0.38, 9, -TILE*0.38, 11, -TILE*0.50, -11, -TILE*0.50]).fill({ color: 0xeeaa55 });
+        // Grid lines on swatter
+        g.setStrokeStyle({ width: 1, color: 0xcc7733, alpha: 0.7 });
+        g.moveTo(0, -TILE*0.38).lineTo(0, -TILE*0.50).stroke();
         break;
-      case 'Sniper':
-        g.roundRect(-2, -TILE*0.62, 4, TILE*0.56, 1).fill({ color: 0xdddddd });
-        g.circle(0, -TILE*0.62, 3).fill({ color: 0x555555 });
+      case 'Zapper':
+        // Long slim electric probe
+        g.roundRect(-2, -TILE*0.65, 4, TILE*0.58, 1).fill({ color: 0xdddddd });
+        g.circle(0, -TILE*0.65, 4).fill({ color: 0xffee00 });
         break;
-      case 'MachineGun': {
-        [-3.5, 0, 3.5].forEach(ox => {
-          g.roundRect(ox-1.5, -TILE*0.44, 3, TILE*0.38, 1).fill({ color: 0xcccccc });
+      case 'Sprinkler': {
+        // Multiple spray nozzles
+        [-4, 0, 4].forEach(ox => {
+          g.roundRect(ox-1.5, -TILE*0.44, 3, TILE*0.38, 1).fill({ color: 0x88ddbb });
         });
         break;
       }
-      case 'Flamethrower':
-        g.poly([-4, -TILE*0.02, 4, -TILE*0.02, 7, -TILE*0.44, -7, -TILE*0.44]).fill({ color: 0xdd8844 });
-        g.roundRect(-3, -TILE*0.44, 6, TILE*0.12, 2).fill({ color: 0xffaa44 });
+      case 'MagGlass':
+        // Handle stem
+        g.poly([-3.5, -TILE*0.02, 3.5, -TILE*0.02, 5, -TILE*0.44, -5, -TILE*0.44]).fill({ color: 0xdd8844 });
+        g.circle(0, -TILE*0.44, TILE*0.15).fill({ color: 0xaaddff, alpha: 0.6 });
         break;
-      case 'Mortar':
-        g.roundRect(-6, -TILE*0.30, 12, TILE*0.26, 3).fill({ color: 0xbbbbbb });
-        g.circle(0, -TILE*0.30, 6).fill({ color: 0x444444 });
+      case 'PoisonBomb':
+        // Short fat tube
+        g.roundRect(-6, -TILE*0.30, 12, TILE*0.26, 3).fill({ color: 0x88cc44 });
+        g.circle(0, -TILE*0.30, 6).fill({ color: 0x225500 });
         break;
       default:
-        g.roundRect(-3.5, -TILE*0.44, 7, TILE*0.40, 2).fill({ color: 0xdddddd });
+        // BugSpray: slim nozzle
+        g.roundRect(-3.5, -TILE*0.44, 7, TILE*0.40, 2).fill({ color: 0x88ccff });
     }
   }
 
@@ -659,84 +676,203 @@ export class Renderer {
     const dark = adjustColor(color, 0.55);
 
     switch (type) {
-      case 'Walker': {
-        g.roundRect(-r*0.48, -r*0.1, r*0.96, r*1.0, 2).fill({ color });
-        g.circle(0, -r*0.45, r*0.52).fill({ color });
-        // eyes
-        g.circle(-r*0.2, -r*0.5, r*0.13).fill({ color: 0xffffff });
-        g.circle( r*0.2, -r*0.5, r*0.13).fill({ color: 0xffffff });
-        g.circle(-r*0.2, -r*0.5, r*0.07).fill({ color: 0xff0000 });
-        g.circle( r*0.2, -r*0.5, r*0.07).fill({ color: 0xff0000 });
-        break;
-      }
-      case 'Runner': {
-        g.ellipse(0, 0, r*0.65, r).fill({ color });
-        g.circle(0, -r*0.62, r*0.38).fill({ color });
-        g.ellipse(-r*0.7, 0, r*0.18, r*0.5).fill({ color: dark });
-        break;
-      }
-      case 'Tank': {
-        g.roundRect(-r, -r*0.7, r*2, r*1.4, 4).fill({ color });
-        g.circle(0, -r*0.55, r*0.35).fill({ color: dark });
-        g.setStrokeStyle({ width: 2.5, color: dark, alpha: 0.8 });
-        g.moveTo(-r*0.8, 0).lineTo(r*0.8, 0).stroke();
-        g.moveTo(-r*0.8, r*0.4).lineTo(r*0.8, r*0.4).stroke();
-        break;
-      }
-      case 'Spitter': {
-        g.circle(0, 0, r).fill({ color });
-        g.circle(0, r*0.35, r*0.3).fill({ color: 0x44ff00 });
-        g.ellipse(0, r*0.78, r*0.1, r*0.25).fill({ color: 0x44ff00 });
-        g.circle(-r*0.3, -r*0.25, r*0.14).fill({ color: 0x000000 });
-        g.circle( r*0.3, -r*0.25, r*0.14).fill({ color: 0x000000 });
-        break;
-      }
-      case 'Crawler': {
-        g.ellipse(0, 0, r*1.3, r*0.65).fill({ color });
-        for (let i = 0; i < 3; i++) {
-          const xOff = (i-1) * r * 0.7;
-          g.roundRect(xOff-1.5, r*0.5, 3, r*0.5, 1).fill({ color: dark });
-          g.roundRect(xOff-1.5, -r,    3, r*0.5, 1).fill({ color: dark });
-        }
-        break;
-      }
-      case 'Screamer': {
-        g.circle(0, 0, r).fill({ color });
-        g.ellipse(0, r*0.22, r*0.48, r*0.38).fill({ color: 0x111111 });
-        g.setStrokeStyle({ width: 2, color: 0xffdd44, alpha: 0.7 });
-        [-30,-15,0,15,30].forEach(deg => {
-          const rad = deg * Math.PI/180;
-          g.moveTo(Math.cos(rad)*r*1.1, Math.sin(rad)*r*1.1)
-           .lineTo(Math.cos(rad)*r*1.6, Math.sin(rad)*r*1.6);
+      case 'Ant': {
+        // Three ant segments: head, thorax, abdomen
+        g.ellipse(0, r*0.55, r*0.42, r*0.52).fill({ color });        // abdomen
+        g.circle(0, 0, r*0.3).fill({ color });                        // thorax
+        g.circle(0, -r*0.52, r*0.35).fill({ color });                 // head
+        // Antennae
+        g.setStrokeStyle({ width: 1.5, color: dark });
+        g.moveTo(-r*0.12, -r*0.78).lineTo(-r*0.45, -r*1.15).stroke();
+        g.moveTo( r*0.12, -r*0.78).lineTo( r*0.45, -r*1.15).stroke();
+        // Tiny end-balls on antennae
+        g.circle(-r*0.45, -r*1.15, r*0.09).fill({ color: dark });
+        g.circle( r*0.45, -r*1.15, r*0.09).fill({ color: dark });
+        // Eyes
+        g.circle(-r*0.18, -r*0.58, r*0.11).fill({ color: 0x000000 });
+        g.circle( r*0.18, -r*0.58, r*0.11).fill({ color: 0x000000 });
+        // Legs (3 pairs from thorax)
+        g.setStrokeStyle({ width: 1.2, color: dark });
+        [-0.5, 0, 0.5].forEach(yo => {
+          g.moveTo(-r*0.3, yo*r*0.35).lineTo(-r*0.8, yo*r*0.35 + r*0.2).stroke();
+          g.moveTo( r*0.3, yo*r*0.35).lineTo( r*0.8, yo*r*0.35 + r*0.2).stroke();
         });
-        g.stroke();
-        g.circle(-r*0.3, -r*0.3, r*0.12).fill({ color: 0xffffff });
-        g.circle( r*0.3, -r*0.3, r*0.12).fill({ color: 0xffffff });
         break;
       }
-      case 'Bloater': {
-        g.circle(0, 0, r).fill({ color });
-        for (let i = 0; i < 7; i++) {
-          const a = (Math.PI*2*i)/7;
-          g.circle(Math.cos(a)*r*0.72, Math.sin(a)*r*0.72, r*0.22).fill({ color: adjustColor(color, 1.3) });
+      case 'Fly': {
+        // Compact body
+        g.ellipse(0, r*0.1, r*0.5, r*0.75).fill({ color });
+        g.circle(0, -r*0.55, r*0.38).fill({ color });
+        // Large wings
+        g.ellipse(-r*0.9, -r*0.2, r*0.65, r*0.28).fill({ color: 0xccddff, alpha: 0.55 });
+        g.ellipse( r*0.9, -r*0.2, r*0.65, r*0.28).fill({ color: 0xccddff, alpha: 0.55 });
+        // Compound eyes (big red)
+        g.circle(-r*0.22, -r*0.6, r*0.18).fill({ color: 0xdd2200 });
+        g.circle( r*0.22, -r*0.6, r*0.18).fill({ color: 0xdd2200 });
+        g.circle(-r*0.22, -r*0.6, r*0.09).fill({ color: 0xff4422 });
+        g.circle( r*0.22, -r*0.6, r*0.09).fill({ color: 0xff4422 });
+        break;
+      }
+      case 'Roach': {
+        // Wide armored oval
+        g.ellipse(0, 0, r*1.1, r*0.75).fill({ color });
+        // Armor segments
+        g.setStrokeStyle({ width: 1.5, color: dark, alpha: 0.7 });
+        g.moveTo(-r*0.8, -r*0.15).lineTo(r*0.8, -r*0.15).stroke();
+        g.moveTo(-r*0.8, r*0.15).lineTo(r*0.8, r*0.15).stroke();
+        // Head
+        g.ellipse(0, -r*0.65, r*0.45, r*0.28).fill({ color });
+        // Antennae
+        g.setStrokeStyle({ width: 1, color: dark });
+        g.moveTo(-r*0.2, -r*0.8).lineTo(-r*0.7, -r*1.2).stroke();
+        g.moveTo( r*0.2, -r*0.8).lineTo( r*0.7, -r*1.2).stroke();
+        // Legs
+        g.setStrokeStyle({ width: 1.5, color: dark });
+        [-0.3, 0, 0.3].forEach(yo => {
+          g.moveTo(-r*1.1, yo*r).lineTo(-r*1.5, yo*r + r*0.25).stroke();
+          g.moveTo( r*1.1, yo*r).lineTo( r*1.5, yo*r + r*0.25).stroke();
+        });
+        break;
+      }
+      case 'Mosquito': {
+        // Slim body
+        g.ellipse(0, r*0.1, r*0.35, r*0.85).fill({ color });
+        g.circle(0, -r*0.65, r*0.28).fill({ color });
+        // Long proboscis
+        g.roundRect(-r*0.04, -r*0.95, r*0.08, r*0.55, 1).fill({ color: dark });
+        // Wings (translucent)
+        g.ellipse(-r*0.7, -r*0.15, r*0.55, r*0.22).fill({ color: 0xaaccff, alpha: 0.5 });
+        g.ellipse( r*0.7, -r*0.15, r*0.55, r*0.22).fill({ color: 0xaaccff, alpha: 0.5 });
+        // Eyes
+        g.circle(-r*0.16, -r*0.7, r*0.12).fill({ color: 0x880000 });
+        g.circle( r*0.16, -r*0.7, r*0.12).fill({ color: 0x880000 });
+        // Legs (thin)
+        g.setStrokeStyle({ width: 1, color: dark });
+        [-0.2, 0.2].forEach(yo => {
+          g.moveTo(-r*0.35, yo*r).lineTo(-r*0.9, yo*r + r*0.3).stroke();
+          g.moveTo( r*0.35, yo*r).lineTo( r*0.9, yo*r + r*0.3).stroke();
+        });
+        break;
+      }
+      case 'Beetle': {
+        // Shield-shaped elytra (wing covers)
+        g.ellipse(0, r*0.1, r*0.9, r*0.8).fill({ color });
+        // Center seam
+        g.setStrokeStyle({ width: 1.5, color: dark, alpha: 0.8 });
+        g.moveTo(0, -r*0.65).lineTo(0, r*0.85).stroke();
+        // Head
+        g.circle(0, -r*0.65, r*0.32).fill({ color });
+        // Spots (iridescent)
+        g.circle(-r*0.35, 0, r*0.16).fill({ color: adjustColor(color, 1.4), alpha: 0.6 });
+        g.circle( r*0.35, 0, r*0.16).fill({ color: adjustColor(color, 1.4), alpha: 0.6 });
+        // Legs
+        g.setStrokeStyle({ width: 1.5, color: dark });
+        [-0.2, 0.2, 0.6].forEach(yo => {
+          g.moveTo(-r*0.9, yo*r).lineTo(-r*1.4, yo*r + r*0.2).stroke();
+          g.moveTo( r*0.9, yo*r).lineTo( r*1.4, yo*r + r*0.2).stroke();
+        });
+        break;
+      }
+      case 'Wasp': {
+        // Segmented body — thorax + tapered abdomen
+        g.ellipse(0, -r*0.15, r*0.5, r*0.45).fill({ color });
+        g.ellipse(0, r*0.58, r*0.32, r*0.52).fill({ color: adjustColor(color, 0.85) });
+        // Black stripes on abdomen
+        g.setStrokeStyle({ width: 2.5, color: 0x221100, alpha: 0.7 });
+        g.moveTo(-r*0.3, r*0.35).lineTo(r*0.3, r*0.35).stroke();
+        g.moveTo(-r*0.28, r*0.58).lineTo(r*0.28, r*0.58).stroke();
+        // Head
+        g.circle(0, -r*0.62, r*0.3).fill({ color });
+        // Stinger
+        g.poly([r*0.04, r*1.08, -r*0.04, r*1.08, 0, r*1.32]).fill({ color: dark });
+        // Wings
+        g.ellipse(-r*0.75, -r*0.22, r*0.6, r*0.2).fill({ color: 0xccddff, alpha: 0.5 });
+        g.ellipse( r*0.75, -r*0.22, r*0.6, r*0.2).fill({ color: 0xccddff, alpha: 0.5 });
+        // Eyes
+        g.circle(-r*0.17, -r*0.68, r*0.12).fill({ color: 0x000000 });
+        g.circle( r*0.17, -r*0.68, r*0.12).fill({ color: 0x000000 });
+        break;
+      }
+      case 'Termite': {
+        // Chunky pale body
+        g.ellipse(0, r*0.15, r*0.7, r*0.85).fill({ color });
+        g.circle(0, -r*0.6, r*0.42).fill({ color });
+        // Mandibles
+        g.setStrokeStyle({ width: 2, color: dark });
+        g.moveTo(-r*0.3, -r*0.85).lineTo(-r*0.55, -r*1.15).stroke();
+        g.moveTo( r*0.3, -r*0.85).lineTo( r*0.55, -r*1.15).stroke();
+        // Warning glow (explosion)
+        g.circle(0, r*0.15, r*0.55).fill({ color: 0xff6600, alpha: 0.2 });
+        // Eyes
+        g.circle(-r*0.2, -r*0.62, r*0.13).fill({ color: 0xff8800 });
+        g.circle( r*0.2, -r*0.62, r*0.13).fill({ color: 0xff8800 });
+        break;
+      }
+      case 'FireAnt': {
+        // Mid-boss: large fire ant with glow
+        g.circle(0, r*0.35, r*0.65).fill({ color: 0xdd3300 }); // abdomen
+        g.circle(0, -r*0.1, r*0.5).fill({ color });            // thorax
+        g.circle(0, -r*0.72, r*0.48).fill({ color });          // head
+        // Fire aura
+        for (let i = 0; i < 6; i++) {
+          const a = (Math.PI*2*i)/6;
+          g.circle(Math.cos(a)*r*1.0, r*0.35 + Math.sin(a)*r*0.65, r*0.18).fill({ color: 0xff8800, alpha: 0.5 });
         }
-        g.circle(0, 0, r*0.25).fill({ color: 0x9933ff, alpha: 0.7 });
+        // Antennae (thicker)
+        g.setStrokeStyle({ width: 2, color: 0xaa2200 });
+        g.moveTo(-r*0.18, -r*1.05).lineTo(-r*0.55, -r*1.5).stroke();
+        g.moveTo( r*0.18, -r*1.05).lineTo( r*0.55, -r*1.5).stroke();
+        g.circle(-r*0.55, -r*1.5, r*0.12).fill({ color: 0xff4400 });
+        g.circle( r*0.55, -r*1.5, r*0.12).fill({ color: 0xff4400 });
+        // Big eyes
+        g.circle(-r*0.24, -r*0.78, r*0.16).fill({ color: 0xff0000 });
+        g.circle( r*0.24, -r*0.78, r*0.16).fill({ color: 0xff0000 });
+        g.circle(-r*0.24, -r*0.78, r*0.08).fill({ color: 0xffffff });
+        g.circle( r*0.24, -r*0.78, r*0.08).fill({ color: 0xffffff });
+        // Legs (heavy)
+        g.setStrokeStyle({ width: 2, color: 0xaa2200 });
+        [-0.4, 0, 0.4].forEach(yo => {
+          g.moveTo(-r*0.5, yo*r).lineTo(-r*1.1, yo*r + r*0.25).stroke();
+          g.moveTo( r*0.5, yo*r).lineTo( r*1.1, yo*r + r*0.25).stroke();
+        });
         break;
       }
-      case 'Alpha': {
-        g.poly([0,-r, r*0.6,-r*0.35, r*0.35,0, r*0.6,r*0.35, 0,r, -r*0.6,r*0.35, -r*0.35,0, -r*0.6,-r*0.35]).fill({ color });
-        g.circle(0, 0, r*0.32).fill({ color: 0xff9900 });
-        g.circle(0, 0, r*0.15).fill({ color: 0xffdd44 });
-        break;
-      }
-      case 'PatientZero': {
-        g.circle(0, 0, r).fill({ color });
-        g.setStrokeStyle({ width: 2.5, color: 0xaa0000, alpha: 0.8 });
-        g.moveTo(-r*0.6, -r*0.5).lineTo(-r*0.2, 0).lineTo(-r*0.5, r*0.5).stroke();
-        g.moveTo( r*0.6, -r*0.5).lineTo( r*0.2, 0).lineTo( r*0.5, r*0.5).stroke();
-        g.rect(-r*0.12, -r*0.6, r*0.24, r*1.2).fill({ color: 0xff2222, alpha: 0.95 });
-        g.rect(-r*0.6, -r*0.12, r*1.2, r*0.24).fill({ color: 0xff2222, alpha: 0.95 });
-        g.circle(0, 0, r*0.22).fill({ color: 0xff4444 });
+      case 'QueenAnt': {
+        // Final boss: huge queen ant with crown
+        g.ellipse(0, r*0.5, r*0.8, r*0.72).fill({ color: 0xcc1100 }); // abdomen
+        g.circle(0, -r*0.15, r*0.6).fill({ color });                   // thorax
+        g.circle(0, -r*0.88, r*0.56).fill({ color });                  // head
+        // Abdomen pattern
+        g.setStrokeStyle({ width: 2.5, color: 0x880000, alpha: 0.7 });
+        g.moveTo(-r*0.7, r*0.45).lineTo(r*0.7, r*0.45).stroke();
+        g.moveTo(-r*0.65, r*0.7).lineTo(r*0.65, r*0.7).stroke();
+        // Crown
+        const crownY = -r*1.4;
+        g.poly([-r*0.4, crownY+r*0.25, r*0.4, crownY+r*0.25, r*0.35, crownY, r*0.15, crownY+r*0.15, 0, crownY-r*0.1, -r*0.15, crownY+r*0.15, -r*0.35, crownY]).fill({ color: 0xffd700 });
+        // Crown jewels
+        g.circle(0, crownY-r*0.05, r*0.09).fill({ color: 0xff2222 });
+        g.circle(-r*0.25, crownY+r*0.1, r*0.07).fill({ color: 0x4444ff });
+        g.circle( r*0.25, crownY+r*0.1, r*0.07).fill({ color: 0x44ff44 });
+        // Wings (large)
+        g.ellipse(-r*1.05, -r*0.2, r*0.75, r*0.3).fill({ color: 0xaabbff, alpha: 0.45 });
+        g.ellipse( r*1.05, -r*0.2, r*0.75, r*0.3).fill({ color: 0xaabbff, alpha: 0.45 });
+        // Antennae
+        g.setStrokeStyle({ width: 2.5, color: 0x880000 });
+        g.moveTo(-r*0.22, -r*1.28).lineTo(-r*0.65, -r*1.75).stroke();
+        g.moveTo( r*0.22, -r*1.28).lineTo( r*0.65, -r*1.75).stroke();
+        g.circle(-r*0.65, -r*1.75, r*0.14).fill({ color: 0xff2222 });
+        g.circle( r*0.65, -r*1.75, r*0.14).fill({ color: 0xff2222 });
+        // Eyes
+        g.circle(-r*0.28, -r*0.96, r*0.18).fill({ color: 0xff0000 });
+        g.circle( r*0.28, -r*0.96, r*0.18).fill({ color: 0xff0000 });
+        g.circle(-r*0.28, -r*0.96, r*0.09).fill({ color: 0xffaaaa });
+        g.circle( r*0.28, -r*0.96, r*0.09).fill({ color: 0xffaaaa });
+        // Heavy legs
+        g.setStrokeStyle({ width: 2.5, color: 0x880000 });
+        [-0.5, 0, 0.5].forEach(yo => {
+          g.moveTo(-r*0.6, yo*r).lineTo(-r*1.3, yo*r + r*0.3).stroke();
+          g.moveTo( r*0.6, yo*r).lineTo( r*1.3, yo*r + r*0.3).stroke();
+        });
         break;
       }
       default:

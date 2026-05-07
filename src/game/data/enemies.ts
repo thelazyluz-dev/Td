@@ -1,70 +1,70 @@
 import type { EnemyDef } from '../entities/types';
 
 export const ENEMY_DEFS: Record<string, EnemyDef> = {
-  Walker: {
-    type: 'Walker',
+  Ant: {
+    type: 'Ant',
     hp: 30,
     speed: 1.0,
     damageToBase: 1,
     goldReward: 5,
   },
-  Runner: {
-    type: 'Runner',
+  Fly: {
+    type: 'Fly',
     hp: 20,
     speed: 1.8,
     damageToBase: 1,
     goldReward: 7,
   },
-  Tank: {
-    type: 'Tank',
+  Roach: {
+    type: 'Roach',
     hp: 150,
     speed: 0.6,
     damageToBase: 3,
     goldReward: 20,
     specialAbility: 'fireImmune',
   },
-  Spitter: {
-    type: 'Spitter',
+  Mosquito: {
+    type: 'Mosquito',
     hp: 40,
     speed: 1.0,
     damageToBase: 2,
     goldReward: 15,
     specialAbility: 'spitAcid',
   },
-  Crawler: {
-    type: 'Crawler',
+  Beetle: {
+    type: 'Beetle',
     hp: 25,
     speed: 1.2,
     damageToBase: 1,
     goldReward: 10,
     specialAbility: 'invisible',
   },
-  Screamer: {
-    type: 'Screamer',
+  Wasp: {
+    type: 'Wasp',
     hp: 50,
     speed: 0.8,
     damageToBase: 0,
     goldReward: 12,
     specialAbility: 'summon',
   },
-  Bloater: {
-    type: 'Bloater',
+  Termite: {
+    type: 'Termite',
     hp: 80,
     speed: 0.7,
     damageToBase: 5,
     goldReward: 25,
     specialAbility: 'explodeOnDeath',
   },
-  Alpha: {
-    type: 'Alpha',
+  FireAnt: {
+    type: 'FireAnt',
     hp: 600,
     speed: 0.5,
     damageToBase: 5,
     goldReward: 100,
     specialAbility: 'midBoss',
   },
-  PatientZero: {
-    type: 'PatientZero',
+  QueenAnt: {
+    type: 'QueenAnt',
     hp: 2000,
     speed: 0.7,
     damageToBase: 10,

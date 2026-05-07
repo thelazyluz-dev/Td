@@ -74,15 +74,15 @@ export function MainMenu() {
 
         {/* Title */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
-          <p style={{ margin: '0 0 4px', color: '#dc2626', fontWeight: 700, fontSize: 10, letterSpacing: '0.4em', textTransform: 'uppercase' }}>
-            Tower Defense · Roguelike
+          <p style={{ margin: '0 0 4px', color: '#f59e0b', fontWeight: 700, fontSize: 10, letterSpacing: '0.4em', textTransform: 'uppercase' }}>
+            🐜 הגנת המטבח · 10 גלים
           </p>
-          <div style={{ lineHeight: 0.92, letterSpacing: '-0.04em' }}>
-            <span style={{ display: 'block', color: '#fff', fontWeight: 900, fontSize: 'clamp(32px, 8vw, 64px)', textShadow: '0 0 60px rgba(220,38,38,0.55), 0 2px 4px rgba(0,0,0,0.8)' }}>LAST</span>
-            <span style={{ display: 'block', color: '#ef4444', fontWeight: 900, fontSize: 'clamp(32px, 8vw, 64px)', textShadow: '0 0 70px rgba(220,38,38,0.75), 0 2px 4px rgba(0,0,0,0.8)' }}>STAND</span>
+          <div style={{ lineHeight: 0.92, letterSpacing: '-0.03em' }}>
+            <span style={{ display: 'block', color: '#fff', fontWeight: 900, fontSize: 'clamp(32px, 8vw, 64px)', textShadow: '0 0 60px rgba(245,158,11,0.5), 0 2px 4px rgba(0,0,0,0.8)' }}>BUG</span>
+            <span style={{ display: 'block', color: '#f59e0b', fontWeight: 900, fontSize: 'clamp(32px, 8vw, 64px)', textShadow: '0 0 70px rgba(245,158,11,0.8), 0 2px 4px rgba(0,0,0,0.8)' }}>OFF!</span>
           </div>
-          <p style={{ margin: '6px 0 0', color: 'rgba(255,255,255,0.28)', fontSize: 12, lineHeight: 1.5, maxWidth: 240 }}>
-            Survive 10 waves. Build towers. Hold the line.
+          <p style={{ margin: '6px 0 0', color: 'rgba(255,255,255,0.35)', fontSize: 12, lineHeight: 1.5, maxWidth: 260 }}>
+            נמלים פולשות לבית! הצב מלכודות ועצור אותן.
           </p>
         </div>
 
@@ -90,22 +90,22 @@ export function MainMenu() {
         <button
           onPointerDown={() => initEngine()}
           style={{
-            background: '#b91c1c', color: '#fff', border: '1px solid rgba(255,255,255,0.12)',
-            fontWeight: 900, fontSize: 17, letterSpacing: '0.1em',
+            background: '#d97706', color: '#fff', border: '1px solid rgba(255,255,255,0.15)',
+            fontWeight: 900, fontSize: 17, letterSpacing: '0.08em',
             padding: 'clamp(10px,2vh,15px) 48px', minHeight: 48, borderRadius: 14,
-            boxShadow: '0 8px 32px rgba(180,0,0,0.45)',
+            boxShadow: '0 8px 32px rgba(217,119,6,0.5)',
             cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
           }}
         >
-          START RUN
+          🛡 להגנה!
         </button>
 
-        {/* Tips — hidden on very short screens */}
+        {/* Tips */}
         <div style={{ display: 'flex', gap: 8, maxWidth: 360 }}>
           {[
-            { icon: '🔫', label: 'Place Towers' },
-            { icon: '🌊', label: '10 Waves' },
-            { icon: '💀', label: 'Hold the Line' },
+            { icon: '🪲', label: 'הצב מלכודות' },
+            { icon: '🌊', label: '10 גלי חרקים' },
+            { icon: '🏠', label: 'הגן על הבית' },
           ].map(({ icon, label }) => (
             <div key={label} style={{
               flex: 1, display: 'flex', alignItems: 'center', gap: 5,

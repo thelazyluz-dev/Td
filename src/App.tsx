@@ -25,7 +25,7 @@ export default function App() {
   if (!state) return <MainMenu />;
 
   return (
-    <div style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#0a2a06' }}>
+    <div style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#0a2a06', paddingRight: 'env(safe-area-inset-right, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
       <HUD />
       <div style={{ flex: 1, position: 'relative', overflow: 'hidden', minHeight: 0 }}>
         <GameCanvas />
