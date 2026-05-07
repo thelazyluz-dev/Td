@@ -98,7 +98,12 @@ export class CombatSystem {
       if (dist <= step) {
         proj.hit = true;
         proj.pos = { ...target.pos };
+        const wasAlive = !target.isDead;
         this.applyProjectileHit(proj, target, aliveEnemies, upgrades, berserkerActive, onLifesteal, onGoldEarned);
+        if (wasAlive && target.isDead) {
+          const killTower = towers.find(t => t.id === proj.towerId);
+          if (killTower) killTower.kills++;
+        }
       } else {
         proj.pos.x += (dx / dist) * step;
         proj.pos.y += (dy / dist) * step;

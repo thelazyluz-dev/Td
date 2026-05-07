@@ -74,6 +74,8 @@ interface TowerSprite {
   selRing: Graphics;
   selTime: number;
   glow: Graphics;
+  killsBadge: Text;
+  prevKills: number;
 }
 
 interface Trail {
@@ -93,6 +95,14 @@ interface Particle {
 interface DmgNum {
   text: Text;
   vy: number;
+  life: number;
+  maxLife: number;
+}
+
+interface Ring {
+  g: Graphics;
+  r: number;
+  maxR: number;
   life: number;
   maxLife: number;
 }
@@ -147,6 +157,13 @@ export class Renderer {
   private bannerTimer = 0;
   private bannerDur   = 0;
 
+  private rings: Ring[] = [];
+  private prevPhase: string | null = null;
+  private baseHpBarFg: Graphics | null = null;
+  private waveOverlay: Graphics | null = null;
+  private waveOverlayText: Text | null = null;
+  private waveOverlayTimer = 0;
+
   private _onResize = () => this.updateViewport();
 
   async init(container: HTMLElement): Promise<void> {
@@ -178,6 +195,33 @@ export class Renderer {
     flashOverlay.alpha = 0;
     this.uiLayer.addChild(flashOverlay);
     this.baseFlashOverlay = flashOverlay;
+
+    // Wave-clear green flash overlay
+    const waveOv = new Graphics();
+    waveOv.rect(0, 0, CANVAS_W, CANVAS_H).fill({ color: 0x44ee88, alpha: 1 });
+    waveOv.alpha = 0;
+    this.uiLayer.addChild(waveOv);
+    this.waveOverlay = waveOv;
+
+    const waveOvText = new Text({ text: '', style: {
+      fontFamily: 'Arial Black, Arial', fontSize: 26, fontWeight: '900',
+      fill: 0xffffff,
+      dropShadow: { alpha: 0.9, angle: Math.PI/2, blur: 8, color: 0x000000, distance: 3 },
+    }});
+    waveOvText.anchor.set(0.5);
+    waveOvText.position.set(CANVAS_W / 2, CANVAS_H / 2);
+    waveOvText.alpha = 0;
+    this.uiLayer.addChild(waveOvText);
+    this.waveOverlayText = waveOvText;
+
+    // Base HP bar (above house sprite at right edge)
+    const hpBg = new Graphics();
+    hpBg.roundRect(742, 142, 56, 7, 3).fill({ color: 0x111111, alpha: 0.75 });
+    this.uiLayer.addChild(hpBg);
+
+    const hpFg = new Graphics();
+    this.uiLayer.addChild(hpFg);
+    this.baseHpBarFg = hpFg;
 
     // Stage background tap → deselect (only when not placing)
     this.app.stage.eventMode = 'static';
@@ -247,51 +291,79 @@ export class Renderer {
     const g = new Graphics();
     const rng = mulberry32(42);
 
-    // ── Garden floor: light stone tiles ─────────────────────────────────────
-    const TILE_SZ = 80;
+    // ── Kitchen ceramic floor tiles ──────────────────────────────────────────
+    const TILE_SZ = 60;
     for (let ty = 0; ty < CANVAS_H; ty += TILE_SZ) {
       for (let tx = 0; tx < CANVAS_W; tx += TILE_SZ) {
-        const checker = ((tx / TILE_SZ) + (ty / TILE_SZ)) % 2 === 0;
-        const base = checker ? 0x4a8a20 : 0x3e7a18;
-        g.rect(tx, ty, TILE_SZ, TILE_SZ).fill({ color: base });
-        // Subtle noise
-        g.rect(tx+4, ty+4, TILE_SZ-8, TILE_SZ-8).fill({ color: checker ? 0x52982a : 0x458520, alpha: 0.3 });
+        const v = rng();
+        const col = v < 0.33 ? 0xf2e8d0 : v < 0.66 ? 0xeee0c8 : 0xf5ead8;
+        g.rect(tx, ty, TILE_SZ, TILE_SZ).fill({ color: col });
+        // Glaze highlight
+        g.rect(tx + 3, ty + 3, TILE_SZ * 0.55, TILE_SZ * 0.28).fill({ color: 0xffffff, alpha: 0.07 });
+        // Occasional stain
+        if (rng() < 0.07) {
+          g.circle(tx + 10 + rng() * (TILE_SZ - 20), ty + 10 + rng() * (TILE_SZ - 20), 3 + rng() * 4).fill({ color: 0xc0a870, alpha: 0.15 });
+        }
         // Grout lines
-        g.setStrokeStyle({ width: 1, color: 0x2a5510, alpha: 0.35 });
+        g.setStrokeStyle({ width: 2.5, color: 0xd0c0a0, alpha: 0.5 });
         g.rect(tx, ty, TILE_SZ, TILE_SZ).stroke();
       }
     }
+    // Baseboard strips
+    g.rect(0, 0, CANVAS_W, 7).fill({ color: 0xd8c8a8, alpha: 0.55 });
+    g.rect(0, CANVAS_H - 7, CANVAS_W, 7).fill({ color: 0xd8c8a8, alpha: 0.55 });
+    g.setStrokeStyle({ width: 1, color: 0xb8a888, alpha: 0.45 });
+    g.moveTo(0, 7).lineTo(CANVAS_W, 7).stroke();
+    g.moveTo(0, CANVAS_H - 7).lineTo(CANVAS_W, CANVAS_H - 7).stroke();
 
-    // ── Grass tufts ──────────────────────────────────────────────────────────
-    for (let i = 0; i < 80; i++) {
+    // ── Food crumbs and floor dust ────────────────────────────────────────────
+    const crumbColors = [0xd4a86e, 0xb8924a, 0xe8c890, 0xcc9966, 0xd4b888];
+    for (let i = 0; i < 70; i++) {
       const px = rng() * CANVAS_W;
       const py = rng() * CANVAS_H;
-      const sz = 6 + rng() * 18;
-      g.circle(px, py, sz).fill({ color: rng() > 0.5 ? 0x3a8e14 : 0x266010, alpha: 0.55 });
+      const sz = 1.2 + rng() * 3.8;
+      g.circle(px, py, sz).fill({ color: crumbColors[Math.floor(rng() * 5)], alpha: 0.45 });
     }
 
-    // ── Decorative garden plants ─────────────────────────────────────────────
-    const plantRng = mulberry32(99);
-    const plants = [
+    // ── Kitchen decorations (jars, bottles, cans) ─────────────────────────────
+    const itemRng = mulberry32(99);
+    const kitchenItems = [
       {x:55, y:38}, {x:195, y:38}, {x:375, y:38}, {x:548, y:38}, {x:718, y:38},
       {x:55, y:462},{x:195, y:462},{x:375, y:462},{x:548, y:462},{x:718, y:462},
       {x:742, y:300},{x:58, y:300},{x:402, y:200},{x:258, y:400},
     ];
-    for (const pos of plants) {
-      const sz = 12 + plantRng() * 8;
-      // Pot
-      g.roundRect(pos.x - sz*0.45, pos.y + sz*0.4, sz*0.9, sz*0.6, 2).fill({ color: 0xcc6633 });
-      // Main foliage
-      g.circle(pos.x, pos.y, sz).fill({ color: 0x1a5508 });
-      g.circle(pos.x - sz*0.4, pos.y - sz*0.2, sz*0.7).fill({ color: 0x246e10 });
-      g.circle(pos.x + sz*0.35, pos.y - sz*0.15, sz*0.6).fill({ color: 0x1f6008 });
-      g.circle(pos.x, pos.y - sz*0.5, sz*0.55).fill({ color: 0x2a7a12 });
-      // Highlights
-      g.circle(pos.x - sz*0.2, pos.y - sz*0.55, sz*0.25).fill({ color: 0x44aa22, alpha: 0.55 });
-      // Flowers
-      const fc = [0xff6688, 0xffcc44, 0xff88aa, 0x88ddff][Math.floor(plantRng()*4)];
-      g.circle(pos.x + sz*0.2, pos.y - sz*0.15, sz*0.18).fill({ color: fc });
-      g.circle(pos.x - sz*0.25, pos.y + sz*0.05, sz*0.15).fill({ color: fc });
+    const bottleColors = [0x88cc44, 0x4488cc, 0xcc8844, 0x44aa88, 0xaa6622];
+    const canColors    = [0xcc4422, 0x4488dd, 0xddaa22, 0x44aa44];
+    for (const pos of kitchenItems) {
+      const type = Math.floor(itemRng() * 3);
+      if (type === 0) {
+        // Glass jar
+        const h = 18 + itemRng() * 10, w = 11 + itemRng() * 5;
+        g.roundRect(pos.x - w/2, pos.y - h, w, h, 3).fill({ color: 0xddf0ee, alpha: 0.55 });
+        g.roundRect(pos.x - w/2 + 1, pos.y - h + 2, w - 2, h * 0.32, 1).fill({ color: 0xffffff, alpha: 0.18 });
+        g.roundRect(pos.x - w * 0.4, pos.y - h - 3, w * 0.8, 4, 1).fill({ color: 0x888877 });
+        g.setStrokeStyle({ width: 1, color: 0xaabbaa, alpha: 0.7 });
+        g.roundRect(pos.x - w/2, pos.y - h, w, h, 3).stroke();
+      } else if (type === 1) {
+        // Bottle
+        const h = 24 + itemRng() * 8;
+        const col = bottleColors[Math.floor(itemRng() * bottleColors.length)];
+        g.roundRect(pos.x - 5, pos.y - h, 10, h, 4).fill({ color: col, alpha: 0.52 });
+        g.roundRect(pos.x - 2.5, pos.y - h - 5, 5, 6, 1).fill({ color: 0x998877 });
+        g.roundRect(pos.x - 4, pos.y - h + 2, 3, h * 0.32, 1).fill({ color: 0xffffff, alpha: 0.14 });
+        g.setStrokeStyle({ width: 0.8, color: col, alpha: 0.5 });
+        g.roundRect(pos.x - 5, pos.y - h, 10, h, 4).stroke();
+      } else {
+        // Metal can
+        const h = 14 + itemRng() * 6;
+        const col = canColors[Math.floor(itemRng() * canColors.length)];
+        g.roundRect(pos.x - 8, pos.y - h, 16, h, 2).fill({ color: col, alpha: 0.82 });
+        g.roundRect(pos.x - 8, pos.y - h, 16, h * 0.28, 1).fill({ color: 0xffffff, alpha: 0.18 });
+        g.setStrokeStyle({ width: 1.2, color: 0x888888, alpha: 0.4 });
+        g.roundRect(pos.x - 8, pos.y - h, 16, h, 2).stroke();
+        g.setStrokeStyle({ width: 1, color: col, alpha: 0.55 });
+        g.moveTo(pos.x - 7, pos.y - h * 0.55).lineTo(pos.x + 7, pos.y - h * 0.55).stroke();
+      }
     }
 
     // ── Ant trail path ───────────────────────────────────────────────────────
@@ -415,14 +487,21 @@ export class Renderer {
     if (!this.app) return;
     if (this.prevBaseHp > 0 && state.baseHp < this.prevBaseHp) this.baseFlashTimer = 0.45;
     this.prevBaseHp = state.baseHp;
+    if (this.prevPhase === 'wave' && state.phase === 'build') {
+      this.triggerWaveClear(state.wave - 1);
+    }
+    this.prevPhase = state.phase;
     this.tickShake(dt);
     this.syncTowers(state, dt);
     this.syncEnemies(state, dt);
     this.syncProjectiles(state);
     this.tickParticles(dt);
+    this.tickRings(dt);
     this.tickDmgNums(dt);
     this.tickBanner(dt);
     this.tickBaseFlash(dt);
+    this.tickWaveOverlay(dt);
+    this.tickBaseHpBar(state);
   }
 
   private tickBaseFlash(dt: number): void {
@@ -640,6 +719,16 @@ export class Renderer {
         sp.selTime = 0;
         sp.selRing.clear();
       }
+
+      // Kill badge
+      const kills = tower.kills ?? 0;
+      if (kills !== sp.prevKills) {
+        sp.prevKills = kills;
+        if (kills > 0) {
+          sp.killsBadge.text = kills >= 1000 ? `${Math.floor(kills / 1000)}k` : String(kills);
+          sp.killsBadge.alpha = 1;
+        }
+      }
     }
 
     for (const [id, sp] of this.towerSprites) {
@@ -828,12 +917,24 @@ export class Renderer {
     const selRing = new Graphics();
     cont.addChild(selRing);
 
+    // Kill count badge
+    const killsBadge = new Text({ text: '', style: {
+      fontFamily: 'Arial Black, Arial', fontSize: 9, fontWeight: '900',
+      fill: 0xff9944,
+      dropShadow: { alpha: 0.8, angle: Math.PI/2, blur: 2, color: 0x000000, distance: 1 },
+    }});
+    killsBadge.anchor.set(1, 0);
+    killsBadge.position.set(TILE * 0.55, TILE * 0.32);
+    killsBadge.alpha = 0;
+    cont.addChild(killsBadge);
+
     return {
       container: cont, barrel, muzzle,
       muzzleTimer: 0, angle: -Math.PI/2,
       popTimer: SPAWN_DUR, recoilTimer: 0, recoilMax: RECOIL_DUR,
       upgradeLevel: 0, starsContainer,
       selRing, selTime: 0, glow,
+      killsBadge, prevKills: 0,
     };
   }
 
@@ -908,6 +1009,8 @@ export class Renderer {
         sp.container.scale.set(0);
         this.enemyLayer.addChild(sp.container);
         this.enemySprites.set(en.id, sp);
+        // Spawn dust burst
+        this.burstParticles(Math.max(15, en.pos.x), en.pos.y, 0x8a6020, enemyRadius(en.type) * 0.6);
       }
 
       // Spawn pop-in animation
@@ -938,6 +1041,7 @@ export class Renderer {
       if (en.hp < sp.prevHp) {
         sp.flashTimer = FLASH_DUR;
         this.spawnDmgNum(en.pos.x, en.pos.y - enemyRadius(en.type) - 8, Math.round(sp.prevHp - en.hp));
+        this.spawnImpactRing(en.pos.x, en.pos.y, enemyRadius(en.type));
       }
       sp.prevHp = en.hp;
       if (sp.flashTimer > 0) {
@@ -945,7 +1049,17 @@ export class Renderer {
         sp.body.tint = sp.flashTimer > FLASH_DUR * 0.5 ? 0xffffff : 0xff2222;
       } else if (en.isFrozen) {
         sp.body.tint = 0x88ccff;
-      } else { sp.body.tint = 0xffffff; }
+      } else {
+        const ratio = Math.max(0, en.hp / en.maxHp);
+        if (ratio < 0.5) {
+          const t = 1 - ratio * 2;
+          const gr = Math.round(0xff * (1 - t * 0.87));
+          const bl = Math.round(0xff * (1 - t));
+          sp.body.tint = (0xff << 16) | (gr << 8) | bl;
+        } else {
+          sp.body.tint = 0xffffff;
+        }
+      }
 
       // Bob
       sp.bobTimer += dt;
@@ -1488,6 +1602,53 @@ export class Renderer {
       d.vy *= 0.92;
       d.text.alpha = d.life / d.maxLife;
     }
+  }
+
+  private spawnImpactRing(x: number, y: number, baseR: number): void {
+    const g = new Graphics();
+    g.position.set(x, y);
+    this.particleLayer.addChild(g);
+    this.rings.push({ g, r: baseR * 0.5, maxR: baseR * 2.4, life: 0.28, maxLife: 0.28 });
+  }
+
+  private tickRings(dt: number): void {
+    for (let i = this.rings.length - 1; i >= 0; i--) {
+      const ring = this.rings[i];
+      ring.life -= dt;
+      if (ring.life <= 0) { this.particleLayer.removeChild(ring.g); this.rings.splice(i, 1); continue; }
+      ring.r += (ring.maxR - ring.r) * Math.min(1, dt * 14);
+      const alpha = (ring.life / ring.maxLife) * 0.5;
+      const width = 1.5 + (ring.life / ring.maxLife);
+      ring.g.clear();
+      ring.g.setStrokeStyle({ width, color: 0xffffff, alpha });
+      ring.g.circle(0, 0, ring.r).stroke();
+    }
+  }
+
+  private triggerWaveClear(waveNum: number): void {
+    if (!this.waveOverlay || !this.waveOverlayText) return;
+    this.waveOverlayText.text = `✓ גל ${waveNum} עבר!`;
+    this.waveOverlayTimer = 1.3;
+  }
+
+  private tickWaveOverlay(dt: number): void {
+    if (this.waveOverlayTimer <= 0) return;
+    this.waveOverlayTimer -= dt;
+    const t = Math.max(0, this.waveOverlayTimer / 1.3);
+    if (this.waveOverlay) this.waveOverlay.alpha = t * 0.18;
+    if (this.waveOverlayText) this.waveOverlayText.alpha = t;
+    if (this.waveOverlayTimer <= 0) {
+      if (this.waveOverlay) this.waveOverlay.alpha = 0;
+      if (this.waveOverlayText) this.waveOverlayText.alpha = 0;
+    }
+  }
+
+  private tickBaseHpBar(state: GameState): void {
+    if (!this.baseHpBarFg) return;
+    const ratio = Math.max(0, state.baseHp / state.baseMaxHp);
+    const col = ratio > 0.6 ? 0x44ee88 : ratio > 0.3 ? 0xffcc22 : 0xff3333;
+    this.baseHpBarFg.clear();
+    if (ratio > 0) this.baseHpBarFg.roundRect(742, 142, 56 * ratio, 7, 3).fill({ color: col });
   }
 
   // ── Cleanup ──────────────────────────────────────────────────────────────

@@ -23,6 +23,7 @@ export class Tower {
   // upgrade tracking
   baseCost: number;
   upgrades: number = 0;
+  kills: number = 0;
   totalSpent: number; // base cost + all upgrade costs paid (for sell refund)
 
   constructor(def: TowerDef, pos: Vec2) {
