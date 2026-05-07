@@ -364,17 +364,19 @@ export class GameEngine {
     this.emit();
   }
 
-  loadBuild(savedTowers: SavedTower[], tileSize: number) {
-    if (this.phase !== 'build') return;
+  loadBuild(savedTowers: SavedTower[], tileSize: number): number {
+    if (this.phase !== 'build') return 0;
+    this.towers = [];
+    let placed = 0;
     for (const st of savedTowers) {
       const def = TOWER_DEFS[st.type];
       if (!def) continue;
       const pos: Vec2 = { x: st.col * tileSize + tileSize / 2, y: st.row * tileSize + tileSize / 2 };
-      if (this.economySystem.spend(def.cost)) {
-        this.towers.push(new Tower(def, pos));
-      }
+      this.towers.push(new Tower(def, pos));
+      placed++;
     }
     this.emit();
+    return placed;
   }
 
   applyUpgrade(id: string) {

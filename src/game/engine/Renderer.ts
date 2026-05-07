@@ -174,7 +174,7 @@ export class Renderer {
       resizeTo: container,
       resolution,
       autoDensity: true,
-      backgroundColor: 0x1a4a0a,
+      backgroundColor: 0x2d5e10,
       antialias: true,
     });
 
@@ -291,79 +291,73 @@ export class Renderer {
     const g = new Graphics();
     const rng = mulberry32(42);
 
-    // ── Kitchen ceramic floor tiles ──────────────────────────────────────────
-    const TILE_SZ = 60;
-    for (let ty = 0; ty < CANVAS_H; ty += TILE_SZ) {
-      for (let tx = 0; tx < CANVAS_W; tx += TILE_SZ) {
+    // ── Garden grass background ───────────────────────────────────────────────
+    g.rect(0, 0, CANVAS_W, CANVAS_H).fill({ color: 0x3d7018 });
+
+    // Grass variation patches
+    for (let ty = 0; ty < CANVAS_H; ty += 28) {
+      for (let tx = 0; tx < CANVAS_W; tx += 28) {
         const v = rng();
-        const col = v < 0.33 ? 0xf2e8d0 : v < 0.66 ? 0xeee0c8 : 0xf5ead8;
-        g.rect(tx, ty, TILE_SZ, TILE_SZ).fill({ color: col });
-        // Glaze highlight
-        g.rect(tx + 3, ty + 3, TILE_SZ * 0.55, TILE_SZ * 0.28).fill({ color: 0xffffff, alpha: 0.07 });
-        // Occasional stain
-        if (rng() < 0.07) {
-          g.circle(tx + 10 + rng() * (TILE_SZ - 20), ty + 10 + rng() * (TILE_SZ - 20), 3 + rng() * 4).fill({ color: 0xc0a870, alpha: 0.15 });
-        }
-        // Grout lines
-        g.setStrokeStyle({ width: 2.5, color: 0xd0c0a0, alpha: 0.5 });
-        g.rect(tx, ty, TILE_SZ, TILE_SZ).stroke();
+        const col = v < 0.28 ? 0x4a8820 : v < 0.55 ? 0x3a6a14 : v < 0.78 ? 0x528a24 : 0x447018;
+        if (rng() < 0.65) g.rect(tx, ty, 28 + rng() * 14, 28 + rng() * 14).fill({ color: col, alpha: 0.38 });
       }
     }
-    // Baseboard strips
-    g.rect(0, 0, CANVAS_W, 7).fill({ color: 0xd8c8a8, alpha: 0.55 });
-    g.rect(0, CANVAS_H - 7, CANVAS_W, 7).fill({ color: 0xd8c8a8, alpha: 0.55 });
-    g.setStrokeStyle({ width: 1, color: 0xb8a888, alpha: 0.45 });
-    g.moveTo(0, 7).lineTo(CANVAS_W, 7).stroke();
-    g.moveTo(0, CANVAS_H - 7).lineTo(CANVAS_W, CANVAS_H - 7).stroke();
 
-    // ── Food crumbs and floor dust ────────────────────────────────────────────
-    const crumbColors = [0xd4a86e, 0xb8924a, 0xe8c890, 0xcc9966, 0xd4b888];
-    for (let i = 0; i < 70; i++) {
-      const px = rng() * CANVAS_W;
-      const py = rng() * CANVAS_H;
-      const sz = 1.2 + rng() * 3.8;
-      g.circle(px, py, sz).fill({ color: crumbColors[Math.floor(rng() * 5)], alpha: 0.45 });
+    // Grass blades
+    for (let i = 0; i < 280; i++) {
+      const gx = rng() * CANVAS_W, gy = rng() * CANVAS_H;
+      const h = 5 + rng() * 10, lean = (rng() - 0.5) * 5;
+      g.setStrokeStyle({ width: 1.2, color: rng() < 0.5 ? 0x2a5808 : 0x5da828, alpha: 0.3 });
+      g.moveTo(gx, gy).lineTo(gx + lean, gy - h).stroke();
     }
 
-    // ── Kitchen decorations (jars, bottles, cans) ─────────────────────────────
-    const itemRng = mulberry32(99);
-    const kitchenItems = [
-      {x:55, y:38}, {x:195, y:38}, {x:375, y:38}, {x:548, y:38}, {x:718, y:38},
-      {x:55, y:462},{x:195, y:462},{x:375, y:462},{x:548, y:462},{x:718, y:462},
-      {x:742, y:300},{x:58, y:300},{x:402, y:200},{x:258, y:400},
+    // ── Flowers ───────────────────────────────────────────────────────────────
+    const flowerCols = [0xff3333, 0xffee22, 0xffeeff, 0xff88cc, 0xff6600, 0xcc44ff, 0xff9944];
+    const flowerRng = mulberry32(55);
+    for (let i = 0; i < 48; i++) {
+      const fx = flowerRng() * CANVAS_W, fy = flowerRng() * CANVAS_H;
+      const col = flowerCols[Math.floor(flowerRng() * flowerCols.length)];
+      const sz = 2.2 + flowerRng() * 1.8;
+      for (let p = 0; p < 5; p++) {
+        const pa = (p / 5) * Math.PI * 2;
+        g.circle(fx + Math.cos(pa) * (sz + 1.8), fy + Math.sin(pa) * (sz + 1.8), sz).fill({ color: col, alpha: 0.92 });
+      }
+      g.circle(fx, fy, sz * 0.75).fill({ color: 0xffee44 });
+    }
+
+    // ── Rocks ─────────────────────────────────────────────────────────────────
+    const rockRng = mulberry32(33);
+    for (let i = 0; i < 22; i++) {
+      const rx = rockRng() * CANVAS_W, ry = rockRng() * CANVAS_H;
+      const rs = 3.5 + rockRng() * 8;
+      g.ellipse(rx, ry, rs * 1.3, rs * 0.7).fill({ color: rockRng() < 0.5 ? 0x7a7060 : 0x8a8278, alpha: 0.75 });
+      g.ellipse(rx - rs * 0.3, ry - rs * 0.25, rs * 0.5, rs * 0.3).fill({ color: 0xaaa898, alpha: 0.28 });
+    }
+
+    // ── Clover patches ────────────────────────────────────────────────────────
+    const cloverRng = mulberry32(77);
+    for (let i = 0; i < 32; i++) {
+      const cx = cloverRng() * CANVAS_W, cy = cloverRng() * CANVAS_H;
+      for (let l = 0; l < 3; l++) {
+        const la = (l / 3) * Math.PI * 2 - Math.PI / 6;
+        g.circle(cx + Math.cos(la) * 3.5, cy + Math.sin(la) * 3.5, 3).fill({ color: 0x2a9a30, alpha: 0.52 });
+      }
+    }
+
+    // ── Garden bushes along top and bottom edges ──────────────────────────────
+    const bushRng = mulberry32(99);
+    const bushPositions = [
+      {x:50,y:28},{x:185,y:26},{x:330,y:30},{x:475,y:24},{x:625,y:28},{x:762,y:26},
+      {x:50,y:474},{x:185,y:474},{x:355,y:472},{x:500,y:474},{x:648,y:470},{x:762,y:474},
     ];
-    const bottleColors = [0x88cc44, 0x4488cc, 0xcc8844, 0x44aa88, 0xaa6622];
-    const canColors    = [0xcc4422, 0x4488dd, 0xddaa22, 0x44aa44];
-    for (const pos of kitchenItems) {
-      const type = Math.floor(itemRng() * 3);
-      if (type === 0) {
-        // Glass jar
-        const h = 18 + itemRng() * 10, w = 11 + itemRng() * 5;
-        g.roundRect(pos.x - w/2, pos.y - h, w, h, 3).fill({ color: 0xddf0ee, alpha: 0.55 });
-        g.roundRect(pos.x - w/2 + 1, pos.y - h + 2, w - 2, h * 0.32, 1).fill({ color: 0xffffff, alpha: 0.18 });
-        g.roundRect(pos.x - w * 0.4, pos.y - h - 3, w * 0.8, 4, 1).fill({ color: 0x888877 });
-        g.setStrokeStyle({ width: 1, color: 0xaabbaa, alpha: 0.7 });
-        g.roundRect(pos.x - w/2, pos.y - h, w, h, 3).stroke();
-      } else if (type === 1) {
-        // Bottle
-        const h = 24 + itemRng() * 8;
-        const col = bottleColors[Math.floor(itemRng() * bottleColors.length)];
-        g.roundRect(pos.x - 5, pos.y - h, 10, h, 4).fill({ color: col, alpha: 0.52 });
-        g.roundRect(pos.x - 2.5, pos.y - h - 5, 5, 6, 1).fill({ color: 0x998877 });
-        g.roundRect(pos.x - 4, pos.y - h + 2, 3, h * 0.32, 1).fill({ color: 0xffffff, alpha: 0.14 });
-        g.setStrokeStyle({ width: 0.8, color: col, alpha: 0.5 });
-        g.roundRect(pos.x - 5, pos.y - h, 10, h, 4).stroke();
-      } else {
-        // Metal can
-        const h = 14 + itemRng() * 6;
-        const col = canColors[Math.floor(itemRng() * canColors.length)];
-        g.roundRect(pos.x - 8, pos.y - h, 16, h, 2).fill({ color: col, alpha: 0.82 });
-        g.roundRect(pos.x - 8, pos.y - h, 16, h * 0.28, 1).fill({ color: 0xffffff, alpha: 0.18 });
-        g.setStrokeStyle({ width: 1.2, color: 0x888888, alpha: 0.4 });
-        g.roundRect(pos.x - 8, pos.y - h, 16, h, 2).stroke();
-        g.setStrokeStyle({ width: 1, color: col, alpha: 0.55 });
-        g.moveTo(pos.x - 7, pos.y - h * 0.55).lineTo(pos.x + 7, pos.y - h * 0.55).stroke();
-      }
+    for (const pos of bushPositions) {
+      const bw = 24 + bushRng() * 16, bh = 14 + bushRng() * 12;
+      const bc = bushRng() < 0.5 ? 0x2a6010 : 0x3a7818;
+      g.ellipse(pos.x + 3, pos.y + 4, bw * 0.65, bh * 0.4).fill({ color: 0x000000, alpha: 0.14 });
+      g.ellipse(pos.x, pos.y, bw, bh).fill({ color: bc });
+      g.ellipse(pos.x - bw * 0.3, pos.y - 3, bw * 0.55, bh * 0.7).fill({ color: 0x4a9020 });
+      g.ellipse(pos.x + bw * 0.25, pos.y - 5, bw * 0.5, bh * 0.65).fill({ color: 0x3a7818 });
+      g.ellipse(pos.x - 4, pos.y - bh * 0.3, bw * 0.35, bh * 0.28).fill({ color: 0x66b030, alpha: 0.32 });
     }
 
     // ── Ant trail path ───────────────────────────────────────────────────────

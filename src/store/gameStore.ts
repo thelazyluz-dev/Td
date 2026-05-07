@@ -114,15 +114,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   saveBuild() {
     const { state } = get();
-    if (!state) return;
+    if (!state || state.towers.length === 0) return;
     saveBuild(state.towers, BALANCE.TILE_SIZE);
   },
 
   loadBuild() {
     const { engine } = get();
     const saved = loadSavedBuild();
-    if (!engine || !saved) return;
-    engine.loadBuild(saved, BALANCE.TILE_SIZE);
+    if (!engine || !saved || saved.length === 0) return 0;
+    return engine.loadBuild(saved, BALANCE.TILE_SIZE);
   },
 
   hasSavedBuild() {
