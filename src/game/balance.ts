@@ -1,0 +1,9 @@
+export const BALANCE = {
+  BASE_HP: 10,
+  STARTING_GOLD: 200,
+  BASE_SPEED_PX_PER_SEC: 60, // 1.0x speed in px/sec
+  BUILD_PHASE_DURATION: 10, // seconds
+  WAVE_HP_MULTIPLIER_PER_WAVE: 0.15,
+  GOLD_WAVE_BONUS_PER_WAVE: 0.05,
+  TILE_SIZE: 40,
+};
