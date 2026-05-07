@@ -2,22 +2,33 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/Td/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
+    <!-- PWA meta -->
+    <meta name="theme-color" content="#050505" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="theme-color" content="#000000" />
+    <meta name="apple-mobile-web-app-title" content="Last Stand" />
+    <meta name="application-name" content="Last Stand" />
+    <meta name="msapplication-TileColor" content="#050505" />
+
+    <!-- Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/Td/favicon-32x32.png" />
+    <link rel="icon" type="image/svg+xml" href="/Td/favicon.svg" />
+    <link rel="apple-touch-icon" href="/Td/apple-touch-icon.png" />
+
     <title>Last Stand</title>
+
     <style>
-      html, body { margin: 0; padding: 0; overflow: hidden; height: 100%; width: 100%; }
-      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; overflow: hidden; height: 100%; width: 100%; background: #050505; }
+      * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     </style>
-    <script type="module" crossorigin src="/Td/assets/index-3EoTWr8N.js"></script>
+    <script type="module" crossorigin src="/Td/assets/index-B23sGy2j.js"></script>
     <link rel="modulepreload" crossorigin href="/Td/assets/rolldown-runtime-S-ySWqyJ.js">
     <link rel="modulepreload" crossorigin href="/Td/assets/Geometry-Dd4v9QZr.js">
-    <link rel="stylesheet" crossorigin href="/Td/assets/index-5mMy6xHj.css">
-  </head>
+    <link rel="stylesheet" crossorigin href="/Td/assets/index-BPygnNi0.css">
+  <link rel="manifest" href="/Td/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/Td/registerSW.js"></script></head>
   <body>
     <div id="root"></div>
   </body>
