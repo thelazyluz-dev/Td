@@ -10,18 +10,15 @@ export function GameCanvas() {
   const stateRef     = useRef<GameState | null>(null);
 
   const { state, placeTower, selectedTower } = useGameStore();
-
-  // Keep stateRef current so the RAF loop always reads the latest
   stateRef.current = state ?? null;
 
-  // Init PixiJS once
+  // Init PixiJS once + own RAF loop
   useEffect(() => {
     if (!containerRef.current) return;
     const renderer = new Renderer();
     rendererRef.current = renderer;
     renderer.init(containerRef.current);
 
-    // Own animation loop — decoupled from React renders
     let rafId: number;
     let lastTs = performance.now();
     const loop = (ts: number) => {
@@ -32,30 +29,49 @@ export function GameCanvas() {
     };
     rafId = requestAnimationFrame(loop);
 
-    return () => {
-      cancelAnimationFrame(rafId);
-      renderer.destroy();
-      rendererRef.current = null;
-    };
+    return () => { cancelAnimationFrame(rafId); renderer.destroy(); rendererRef.current = null; };
   }, []);
 
-  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  // Convert any client {x,y} → game grid cell.
+  // getBoundingClientRect already reflects CSS scale applied by parent,
+  // so normalizing by rect dimensions always yields correct game coords.
+  const toGameCell = (clientX: number, clientY: number) => {
+    const rect = containerRef.current!.getBoundingClientRect();
+    const gameX = ((clientX - rect.left) / rect.width)  * CANVAS_W;
+    const gameY = ((clientY - rect.top)  / rect.height) * CANVAS_H;
+    return { col: Math.floor(gameX / TILE), row: Math.floor(gameY / TILE) };
+  };
+
+  const tryPlace = (clientX: number, clientY: number) => {
     if (!state || state.phase !== 'build' || !selectedTower) return;
-    const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-    const col = Math.floor((e.clientX - rect.left) / TILE);
-    const row = Math.floor((e.clientY - rect.top)  / TILE);
+    const { col, row } = toGameCell(clientX, clientY);
     if (isCellOnPath(col, row, TILE)) return;
     placeTower({ x: col * TILE + TILE / 2, y: row * TILE + TILE / 2 });
   };
 
-  const cursor = selectedTower && state?.phase === 'build' ? 'crosshair' : 'default';
+  const handleClick = (e: React.MouseEvent) => tryPlace(e.clientX, e.clientY);
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    e.preventDefault(); // prevent ghost click + scroll
+    const t = e.changedTouches[0];
+    if (t) tryPlace(t.clientX, t.clientY);
+  };
+
+  const canPlace = selectedTower && state?.phase === 'build';
 
   return (
     <div
       ref={containerRef}
       onClick={handleClick}
-      style={{ width: CANVAS_W, height: CANVAS_H, cursor }}
-      className="relative rounded-sm overflow-hidden shadow-2xl"
+      onTouchEnd={handleTouchEnd}
+      style={{
+        width: CANVAS_W,
+        height: CANVAS_H,
+        cursor: canPlace ? 'crosshair' : 'default',
+        touchAction: 'none',   // prevent browser scroll/zoom on touch
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+      }}
     />
   );
 }
