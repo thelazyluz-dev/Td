@@ -531,12 +531,15 @@ export class Renderer {
         this.towerSprites.set(tower.id, sp);
       }
 
-      // Pop-in
+      // Pop-in / upgrade pop
+      const finalScale = 1 + sp.upgradeLevel * 0.1;
       if (sp.popTimer > 0) {
         sp.popTimer -= dt;
-        const t2 = 1 - sp.popTimer / SPAWN_DUR;
-        const s2 = t2 < 0.6 ? (t2/0.6)*1.25 : 1.25 - ((t2-0.6)/0.4)*0.25;
+        const t2 = 1 - Math.max(0, sp.popTimer) / SPAWN_DUR;
+        const s2 = t2 < 0.6 ? (t2/0.6)*1.3 : finalScale + (1.3 - finalScale) * (1 - (t2-0.6)/0.4);
         sp.container.scale.set(Math.max(0, s2));
+      } else {
+        sp.container.scale.set(finalScale);
       }
 
       // Barrel rotation
@@ -570,9 +573,10 @@ export class Renderer {
         sp.muzzle.alpha = Math.max(0, sp.muzzleTimer / MUZZLE_DUR);
       }
 
-      // Upgrade stars
+      // Upgrade stars + pop
       if (tower.upgrades !== sp.upgradeLevel) {
         sp.upgradeLevel = tower.upgrades;
+        sp.popTimer = SPAWN_DUR * 1.4; // bounce on upgrade
         this.updateStars(sp, tower.upgrades);
       }
 

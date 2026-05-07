@@ -34,11 +34,54 @@ const TOWER_COLORS: Record<string, string> = {
   BugLight:   '#ffff44',
 };
 
+const UPGRADE_FLAVOR: Record<string, [string, string, string]> = {
+  BugSpray:   [
+    'ריסוס כפול — עכשיו הם מריחים אותך מ-50 מטר',
+    'ספריי מקצועי — הם שולחים מכתב התנגדות',
+    'נשק ביולוגי — ה-EPA בוכה בפינה',
+  ],
+  Swatter:    [
+    'מחבט מחוזק — שמע את ה-POP!',
+    'מחבט כבד — יד רועדת שלוש שניות',
+    'זֶבֶד-מוות! מיתולוגי.',
+  ],
+  Zapper:     [
+    'יותר וואט — יותר ריח שרוף, פחות חרקים',
+    'מחשמל בינוני — שיניים נפלות',
+    'ברק זאוס — לא ממש, אבל כמעט',
+  ],
+  Sprinkler:  [
+    'ריסוס חזק — הם שונאים מים (מי ידע?)',
+    'שיטפון ממוקד — טבע עצוב מאוד',
+    'גשם מונסון — הם חושבים שעברו לסיאטל',
+  ],
+  MagGlass:   [
+    'פוקוס חד — כמו ילד קטן עם זכוכית בקיץ',
+    'לייזר חצי-מקצועי — צריך רישיון',
+    'קרן מוות — אל תביט ישירות. ממש.',
+  ],
+  PoisonBomb: [
+    'ירוק יותר = רעיל יותר. זה מדע.',
+    'ענן גז כבד — אסורה הכניסה',
+    'אפוקליפסה כימית — גרסת גן!',
+  ],
+  GlueTrap:   [
+    'כמו דייסה. הם לא זזים. כלל.',
+    'בטון ביולוגי. ממש בטון.',
+    'שחור חור דבקות. פיזיקה קרסה.',
+  ],
+  BugLight:   [
+    'יותר ואט — עיניים כואבות לחרקים',
+    'בוהק כמו אולפן — מסנוור לגמרי',
+    'שמש שנייה — משקפי שמש חובה',
+  ],
+};
+
 export function HUD() {
   const {
     state, selectedTower, selectedUpgradeTowerId,
     selectTower, skipBuild, sendNextWave, airStrike, empBlast,
-    selectForUpgrade, upgradeTower, sellTower,
+    selectForUpgrade, upgradeTower, sellTower, setSpeed,
   } = useGameStore();
   if (!state) return null;
 
@@ -105,6 +148,23 @@ export function HUD() {
             {inBuild && (
               <button onPointerDown={() => skipBuild()} style={{ background: '#16a34a', border: '1px solid #22c55e', color: '#fff', borderRadius: 6, fontSize: 11, fontWeight: 700, padding: '4px 12px', minHeight: 28, cursor: 'pointer', WebkitTapHighlightColor: 'transparent', boxShadow: '0 0 8px rgba(34,197,94,0.5)' }}>
                 ▶ מוכן!
+              </button>
+            )}
+            {inWave && (
+              <button
+                onPointerDown={() => setSpeed(state.speed === 2 ? 1 : 2)}
+                style={{
+                  background: state.speed === 2 ? 'rgba(220,80,0,0.85)' : 'rgba(60,60,60,0.7)',
+                  border: `1px solid ${state.speed === 2 ? '#ff6600' : 'rgba(255,255,255,0.15)'}`,
+                  color: state.speed === 2 ? '#fff' : 'rgba(255,255,255,0.6)',
+                  borderRadius: 6, fontSize: 11, fontWeight: 800,
+                  padding: '4px 8px', minHeight: 28, cursor: 'pointer',
+                  WebkitTapHighlightColor: 'transparent',
+                  boxShadow: state.speed === 2 ? '0 0 10px rgba(255,100,0,0.5)' : 'none',
+                  letterSpacing: '0.02em',
+                }}
+              >
+                {state.speed === 2 ? '⏩ x2' : '▶ x1'}
               </button>
             )}
             {inWave && state.canSendNextWave && (
@@ -301,6 +361,11 @@ export function HUD() {
                       {nextDps > 0 && <StatRow label="DPS" val={`${nextDps}`} col="#ff9944" arrow={curDps > 0 ? `+${Math.round((nextDps/curDps-1)*100)}%` : undefined} />}
                       {nextRange > 0 && <StatRow label="טווח" val={`${nextRange}`} col="#44ccff" arrow={curRange > 0 ? `+${Math.round((nextRange/curRange-1)*100)}%` : undefined} />}
                     </div>
+                    {UPGRADE_FLAVOR[upgradeTowerData.type]?.[lvl] && (
+                      <div style={{ marginTop: 6, color: '#aaffaa', fontSize: 9, fontStyle: 'italic', lineHeight: 1.4, opacity: 0.85 }}>
+                        {UPGRADE_FLAVOR[upgradeTowerData.type][lvl]}
+                      </div>
+                    )}
                   </>
                 )}
               </div>

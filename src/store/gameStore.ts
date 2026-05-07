@@ -19,6 +19,7 @@ interface GameStore {
   selectForUpgrade: (id: number | null) => void;
   upgradeTower: (id: number) => void;
   sellTower: (id: number) => void;
+  setSpeed: (mult: number) => void;
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -89,5 +90,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!engine) return;
     engine.sellTower(id);
     set({ selectedUpgradeTowerId: null });
+  },
+
+  setSpeed(mult) {
+    get().engine?.setSpeed(mult);
   },
 }));

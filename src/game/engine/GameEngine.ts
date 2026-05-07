@@ -27,6 +27,7 @@ export interface GameState {
   empCharges: number;
   canSendNextWave: boolean;
   earlyWaveBonus: number;
+  speed: number;
 }
 
 type StateListener = (state: GameState) => void;
@@ -49,6 +50,7 @@ export class GameEngine {
   private airStrikeCharges = 0;
   private empCharges = 0;
   private goldMult = 1.0;
+  private speedMult = 1;
   private regenTimer = 0;
   private regenHPPerThirty = 0;
   private lastTs: number | null = null;
@@ -91,6 +93,7 @@ export class GameEngine {
       empCharges: this.empCharges,
       canSendNextWave: canSend,
       earlyWaveBonus: EARLY_WAVE_BONUS,
+      speed: this.speedMult,
     };
   }
 
@@ -118,12 +121,15 @@ export class GameEngine {
   };
 
   private tick(dt: number) {
+    const adt = dt * this.speedMult;
     switch (this.phase) {
-      case 'build': this.tickBuild(dt); break;
-      case 'wave':  this.tickWave(dt);  break;
+      case 'build': this.tickBuild(adt); break;
+      case 'wave':  this.tickWave(adt);  break;
     }
     this.emit();
   }
+
+  setSpeed(mult: number) { this.speedMult = mult; this.emit(); }
 
   private tickBuild(_dt: number) {
     // Build phase: player presses Ready to start

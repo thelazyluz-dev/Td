@@ -24,64 +24,76 @@ export function GameOver() {
     : getLoseMessage(state.wave, state.gold);
 
   return (
-    <div className="absolute inset-0 flex items-center justify-center z-50"
-         style={{ background: isWin ? 'rgba(0,20,0,0.88)' : 'rgba(20,0,0,0.88)' }}>
-      <div className={`
-        flex flex-col items-center gap-6 p-10 rounded-2xl
-        border shadow-2xl backdrop-blur-md
-        ${isWin
-          ? 'border-emerald-800 bg-emerald-950/60 shadow-emerald-900/40'
-          : 'border-red-900 bg-red-950/60 shadow-red-900/40'
-        }
-      `}>
-        {/* Icon */}
-        <div className="text-6xl">{isWin ? '🏆' : '☠️'}</div>
+    <div
+      className="absolute inset-0 flex items-center justify-center z-50"
+      style={{ background: isWin ? 'rgba(0,20,0,0.88)' : 'rgba(20,0,0,0.88)', padding: '12px' }}
+    >
+      <div
+        style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          gap: 12, padding: '16px 20px',
+          borderRadius: 18,
+          border: `1px solid ${isWin ? 'rgba(52,211,153,0.35)' : 'rgba(239,68,68,0.35)'}`,
+          background: isWin ? 'rgba(6,78,59,0.75)' : 'rgba(69,10,10,0.75)',
+          backdropFilter: 'blur(12px)',
+          boxShadow: isWin ? '0 20px 60px rgba(16,185,129,0.25)' : '0 20px 60px rgba(239,68,68,0.25)',
+          maxWidth: 340, width: '100%',
+          maxHeight: '90vh', overflowY: 'auto',
+        }}
+      >
+        <div style={{ fontSize: 40 }}>{isWin ? '🏆' : '☠️'}</div>
 
-        {/* Title */}
-        <div className="text-center">
-          <h1 className={`text-4xl font-black tracking-tight ${isWin ? 'text-emerald-300' : 'text-red-400'}`}>
+        <div style={{ textAlign: 'center' }}>
+          <h1 style={{
+            fontSize: 'clamp(18px, 5vw, 28px)', fontWeight: 900, margin: 0,
+            color: isWin ? '#6ee7b7' : '#fca5a5', letterSpacing: '-0.02em',
+          }}>
             {title}
           </h1>
-          <p className="text-white/60 mt-2 text-sm max-w-xs leading-relaxed">
+          <p style={{ color: 'rgba(255,255,255,0.55)', margin: '6px 0 0', fontSize: 12, lineHeight: 1.5 }}>
             {subtitle}
           </p>
         </div>
 
-        {/* Stats */}
-        <div className="flex gap-6 px-6 py-3 rounded-xl bg-white/5 border border-white/5">
-          <div className="text-center">
-            <p className="text-white/40 text-xs tracking-wider">גלים</p>
-            <p className="text-white font-bold text-xl">{state.wave}</p>
-          </div>
-          <div className="w-px bg-white/10" />
-          <div className="text-center">
-            <p className="text-white/40 text-xs tracking-wider">חיי בסיס</p>
-            <p className="text-white font-bold text-xl">{state.baseHp}</p>
-          </div>
-          <div className="w-px bg-white/10" />
-          <div className="text-center">
-            <p className="text-white/40 text-xs tracking-wider">זהב</p>
-            <p className="text-amber-400 font-bold text-xl">{state.gold}</p>
-          </div>
+        <div style={{
+          display: 'flex', gap: 16, padding: '8px 16px',
+          borderRadius: 12, background: 'rgba(255,255,255,0.05)',
+          border: '1px solid rgba(255,255,255,0.07)',
+        }}>
+          {[
+            { label: 'גלים',     val: String(state.wave),    color: '#fff' },
+            { label: 'חיי בסיס', val: String(state.baseHp),  color: '#fff' },
+            { label: 'זהב',      val: String(state.gold),    color: '#fbbf24' },
+          ].map(({ label, val, color }, i) => (
+            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: i > 0 ? 16 : 0 }}>
+              {i > 0 && <div style={{ width: 1, height: 28, background: 'rgba(255,255,255,0.1)', marginRight: 0 }} />}
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ color: 'rgba(255,255,255,0.38)', fontSize: 9, fontWeight: 700, letterSpacing: '0.08em' }}>{label}</div>
+                <div style={{ color, fontWeight: 800, fontSize: 18, fontFamily: 'monospace' }}>{val}</div>
+              </div>
+            </div>
+          ))}
         </div>
 
-        {/* Buttons */}
-        <div className="flex gap-3 w-full">
+        <div style={{ display: 'flex', gap: 8, width: '100%' }}>
           <button
             onClick={() => initEngine()}
-            className={`
-              flex-1 py-3 rounded-xl font-bold text-sm transition-all
-              ${isWin
-                ? 'bg-emerald-700 hover:bg-emerald-600 text-white'
-                : 'bg-red-700 hover:bg-red-600 text-white'
-              }
-            `}
+            style={{
+              flex: 1, padding: '11px 0', borderRadius: 12, fontWeight: 800, fontSize: 13,
+              border: 'none', cursor: 'pointer',
+              background: isWin ? '#059669' : '#dc2626',
+              color: '#fff',
+            }}
           >
             שחק שוב
           </button>
           <button
             onClick={resetGame}
-            className="flex-1 py-3 rounded-xl font-bold text-sm bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white transition-all"
+            style={{
+              flex: 1, padding: '11px 0', borderRadius: 12, fontWeight: 700, fontSize: 13,
+              background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+              color: 'rgba(255,255,255,0.65)', cursor: 'pointer',
+            }}
           >
             תפריט
           </button>
