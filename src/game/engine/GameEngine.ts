@@ -8,8 +8,6 @@ import { TOWER_DEFS } from '../data/towers';
 import { BALANCE } from '../balance';
 import type { GamePhase, Vec2 } from '../entities/types';
 
-const EARLY_WAVE_BONUS = 50;
-
 export interface GameState {
   phase: GamePhase;
   wave: number; // 1-based display (highest committed wave)
@@ -27,6 +25,7 @@ export interface GameState {
   canSendNextWave: boolean;
   earlyWaveBonus: number;
   speed: number;
+  lastPerfectBonus: number;
 }
 
 type StateListener = (state: GameState) => void;
@@ -51,6 +50,8 @@ export class GameEngine {
   private goldMult = 1.0;
   private speedMult = 1;
   private regenTimer = 0;
+  private baseDamagedThisWave = false;
+  private lastPerfectBonus = 0;
   private regenHPPerThirty = 0;
   private lastTs: number | null = null;
   private rafId: number | null = null;
@@ -89,8 +90,9 @@ export class GameEngine {
       airStrikeCharges: this.airStrikeCharges,
       empCharges: this.empCharges,
       canSendNextWave: canSend,
-      earlyWaveBonus: EARLY_WAVE_BONUS,
+      earlyWaveBonus: this.earlyWaveBonusAmount(),
       speed: this.speedMult,
+      lastPerfectBonus: this.lastPerfectBonus,
     };
   }
 
@@ -126,6 +128,10 @@ export class GameEngine {
     this.emit();
   }
 
+  private earlyWaveBonusAmount(): number {
+    return 50 + this.committedWaveIdx * 15;
+  }
+
   setSpeed(mult: number) { this.speedMult = mult; this.emit(); }
 
   private tickBuild(_dt: number) {
@@ -135,6 +141,8 @@ export class GameEngine {
   private beginWave() {
     this.phase = 'wave';
     this.earlyWaveSentThisRound = false;
+    this.baseDamagedThisWave = false;
+    this.lastPerfectBonus = 0;
     const ws = new WaveSystem();
     ws.startWave(this.committedWaveIdx);
     this.waveSystems = [ws];
@@ -160,6 +168,7 @@ export class GameEngine {
     for (const e of reachedEnd) {
       e.isDead = true;
       const dmg = e.damageToBase;
+      this.baseDamagedThisWave = true;
       if (this.surviveOnce && this.baseHp - dmg <= 0) {
         this.baseHp = 1;
         this.surviveOnce = false;
@@ -190,6 +199,13 @@ export class GameEngine {
   }
 
   private endWave() {
+    if (!this.baseDamagedThisWave) {
+      const perfBonus = 30 + this.committedWaveIdx * 8;
+      this.lastPerfectBonus = perfBonus;
+      this.economySystem.earn(perfBonus, 1.0);
+    } else {
+      this.lastPerfectBonus = 0;
+    }
     this.committedWaveIdx++;
     this.buildTimer = BALANCE.BUILD_PHASE_DURATION;
     this.phase = 'build';
@@ -240,8 +256,9 @@ export class GameEngine {
     if (this.phase !== 'wave') return;
     if (this.earlyWaveSentThisRound) return;
     this.earlyWaveSentThisRound = true;
+    const earlyBonus = this.earlyWaveBonusAmount();
     this.committedWaveIdx++;
-    this.economySystem.earn(EARLY_WAVE_BONUS, this.goldMult);
+    this.economySystem.earn(earlyBonus, this.goldMult);
     const ws = new WaveSystem();
     ws.startWave(this.committedWaveIdx);
     this.waveSystems.push(ws);

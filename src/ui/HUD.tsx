@@ -98,8 +98,21 @@ export function HUD() {
 
   const [confirmRestart, setConfirmRestart] = useState(false);
   const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [perfectToast, setPerfectToast] = useState(0);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => () => { if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current); }, []);
+  useEffect(() => () => {
+    if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+  }, []);
+
+  useEffect(() => {
+    if (state?.lastPerfectBonus && state.lastPerfectBonus > 0) {
+      setPerfectToast(state.lastPerfectBonus);
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = setTimeout(() => setPerfectToast(0), 3500);
+    }
+  }, [state?.lastPerfectBonus]);
 
   const handleRestartPress = () => {
     if (confirmRestart) {
@@ -126,73 +139,127 @@ export function HUD() {
 
   return (
     <>
+      {/* ── Single combined HUD row ── */}
       <div
-        className="flex flex-col pointer-events-none select-none"
+        className="flex items-stretch pointer-events-none select-none"
         style={{ WebkitUserSelect: 'none', flexShrink: 0 }}
       >
-        {/* ── Top bar ── */}
         <div
-          className="flex items-center justify-between px-3 pointer-events-auto"
+          className="flex pointer-events-auto"
           style={{
             background: 'rgba(0,20,0,0.92)',
             borderBottom: '1px solid rgba(80,200,80,0.2)',
             backdropFilter: 'blur(6px)',
-            minHeight: 38,
+            width: '100%',
+            minHeight: 52,
           }}
         >
-          {/* Stats */}
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1">
-              <span style={{ color: hpColor, fontSize: 14, lineHeight: 1 }}>♥</span>
-              <span style={{ color: hpColor, fontFamily: 'monospace', fontWeight: 700, fontSize: 13 }}>
-                {state.baseHp}<span style={{ color: 'rgba(255,100,100,0.4)', fontSize: 11 }}>/{state.baseMaxHp}</span>
+          {/* LEFT: restart + compact stats */}
+          <div style={{
+            display: 'flex', flexDirection: 'column', justifyContent: 'center',
+            padding: '2px 6px 2px 7px', gap: 3, flexShrink: 0,
+            borderRight: '1px solid rgba(80,200,80,0.1)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+              <button
+                onPointerDown={handleRestartPress}
+                style={{
+                  background: confirmRestart ? 'rgba(220,50,50,0.85)' : 'rgba(60,60,60,0.5)',
+                  border: `1px solid ${confirmRestart ? '#ff4444' : 'rgba(255,255,255,0.12)'}`,
+                  color: confirmRestart ? '#fff' : 'rgba(255,255,255,0.45)',
+                  borderRadius: 5, fontSize: confirmRestart ? 8 : 11, fontWeight: 700,
+                  padding: '1px 5px', height: 20, lineHeight: 1,
+                  cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
+                  whiteSpace: 'nowrap', minWidth: 24,
+                  boxShadow: confirmRestart ? '0 0 8px rgba(255,60,60,0.5)' : 'none',
+                }}
+              >
+                {confirmRestart ? '?' : '↺'}
+              </button>
+              <span style={{ color: hpColor, fontSize: 11, fontFamily: 'monospace', fontWeight: 700 }}>
+                ♥ {state.baseHp}<span style={{ color: 'rgba(255,100,100,0.4)', fontSize: 9 }}>/{state.baseMaxHp}</span>
               </span>
             </div>
-            <div className="flex items-center gap-1">
-              <span style={{ color: '#ffd700', fontSize: 13 }}>$</span>
-              <span style={{ color: '#ffe066', fontFamily: 'monospace', fontWeight: 700, fontSize: 13 }}>{state.gold}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span style={{ color: '#66aaff', fontWeight: 700, fontSize: 9, letterSpacing: '0.08em' }}>גל</span>
-              <span style={{ color: '#88ccff', fontFamily: 'monospace', fontWeight: 700, fontSize: 13 }}>
-                {state.wave}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 11 }}>
+                <span style={{ color: '#ffd700' }}>$</span>
+                <span style={{ color: '#ffe066' }}>{state.gold}</span>
+              </span>
+              <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 11 }}>
+                <span style={{ color: '#66aaff', fontSize: 9 }}>גל</span>
+                <span style={{ color: '#88ccff' }}>{state.wave}</span>
               </span>
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-1.5">
-            {/* Restart button */}
-            <button
-              onPointerDown={handleRestartPress}
+          {/* CENTER: scrollable tower shop */}
+          {showShop && (
+            <div
               style={{
-                background: confirmRestart ? 'rgba(220,50,50,0.85)' : 'rgba(60,60,60,0.5)',
-                border: `1px solid ${confirmRestart ? '#ff4444' : 'rgba(255,255,255,0.12)'}`,
-                color: confirmRestart ? '#fff' : 'rgba(255,255,255,0.45)',
-                borderRadius: 6, fontSize: confirmRestart ? 9 : 13, fontWeight: 700,
-                padding: '4px 7px', minHeight: 28, cursor: 'pointer',
-                WebkitTapHighlightColor: 'transparent',
-                transition: 'all 0.15s',
-                whiteSpace: 'nowrap',
-                boxShadow: confirmRestart ? '0 0 10px rgba(255,60,60,0.5)' : 'none',
+                flex: 1, display: 'flex', alignItems: 'center',
+                gap: 2, padding: '3px 3px',
+                overflowX: 'auto', scrollbarWidth: 'none',
+                WebkitOverflowScrolling: 'touch',
               }}
             >
-              {confirmRestart ? 'בטוח?' : '↺'}
-            </button>
+              {Object.values(TOWER_DEFS).map((def) => {
+                const sel       = selectedTower === def.type;
+                const canAfford = state.gold >= def.cost;
+                const accentColor = TOWER_COLORS[def.type] ?? '#aaaaaa';
+                return (
+                  <button
+                    key={def.type}
+                    disabled={!canAfford}
+                    onPointerDown={() => selectTower(sel ? null : def.type)}
+                    style={{
+                      flexShrink: 0,
+                      width: 46,
+                      height: 44,
+                      padding: '2px 3px',
+                      borderRadius: 6,
+                      border: `1px solid ${sel ? '#ffd700' : 'rgba(255,255,255,0.12)'}`,
+                      borderLeft: `3px solid ${accentColor}`,
+                      background: sel
+                        ? `rgba(${hexToRgb(accentColor)},0.22)`
+                        : canAfford
+                          ? 'rgba(255,255,255,0.06)'
+                          : 'rgba(255,255,255,0.02)',
+                      opacity: canAfford ? 1 : 0.35,
+                      cursor: canAfford ? 'pointer' : 'not-allowed',
+                      WebkitTapHighlightColor: 'transparent',
+                      boxShadow: sel ? `0 0 10px ${accentColor}44` : 'none',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 1,
+                    }}
+                  >
+                    <span style={{ fontSize: 14, lineHeight: 1 }}>{TOWER_ICONS[def.type] ?? '🗼'}</span>
+                    <span style={{ color: '#e5e7eb', fontSize: 8, fontWeight: 700, lineHeight: 1.1 }}>{TOWER_NAMES_HE[def.type] ?? def.type}</span>
+                    <span style={{ color: canAfford ? '#ffd700' : '#888', fontSize: 8, lineHeight: 1, fontWeight: 700 }}>${def.cost}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* RIGHT: action buttons */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 2,
+            padding: '3px 5px 3px 3px', flexShrink: 0,
+            borderLeft: '1px solid rgba(80,200,80,0.1)',
+          }}>
             {inBuild && (
-              <span className="flex items-center gap-1" style={{ color: '#44ee88', fontWeight: 600, fontSize: 10 }}>
-                <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: '#44ee88' }} />
-                בנה
-              </span>
-            )}
-            {inWave && (
-              <span className="flex items-center gap-1" style={{ color: '#ff9944', fontWeight: 600, fontSize: 10 }}>
-                <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: '#ff9944' }} />
-                גל פעיל
-              </span>
-            )}
-            {inBuild && (
-              <button onPointerDown={() => skipBuild()} style={{ background: '#16a34a', border: '1px solid #22c55e', color: '#fff', borderRadius: 6, fontSize: 11, fontWeight: 700, padding: '4px 12px', minHeight: 28, cursor: 'pointer', WebkitTapHighlightColor: 'transparent', boxShadow: '0 0 8px rgba(34,197,94,0.5)' }}>
+              <button
+                onPointerDown={() => skipBuild()}
+                style={{
+                  background: '#16a34a', border: '1px solid #22c55e', color: '#fff',
+                  borderRadius: 6, fontSize: 11, fontWeight: 700, padding: '0 9px',
+                  height: 36, cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
+                  boxShadow: '0 0 8px rgba(34,197,94,0.5)', whiteSpace: 'nowrap',
+                }}
+              >
                 ▶ מוכן!
               </button>
             )}
@@ -203,14 +270,13 @@ export function HUD() {
                   background: state.speed === 2 ? 'rgba(220,80,0,0.85)' : 'rgba(60,60,60,0.7)',
                   border: `1px solid ${state.speed === 2 ? '#ff6600' : 'rgba(255,255,255,0.15)'}`,
                   color: state.speed === 2 ? '#fff' : 'rgba(255,255,255,0.6)',
-                  borderRadius: 6, fontSize: 11, fontWeight: 800,
-                  padding: '4px 8px', minHeight: 28, cursor: 'pointer',
+                  borderRadius: 6, fontSize: 13, fontWeight: 800,
+                  width: 38, height: 36, cursor: 'pointer',
                   WebkitTapHighlightColor: 'transparent',
-                  boxShadow: state.speed === 2 ? '0 0 10px rgba(255,100,0,0.5)' : 'none',
-                  letterSpacing: '0.02em',
+                  boxShadow: state.speed === 2 ? '0 0 8px rgba(255,100,0,0.5)' : 'none',
                 }}
               >
-                {state.speed === 2 ? '⏩ x2' : '▶ x1'}
+                {state.speed === 2 ? '⏩' : '▶▶'}
               </button>
             )}
             {inWave && state.canSendNextWave && (
@@ -220,87 +286,75 @@ export function HUD() {
                   background: 'rgba(160,100,0,0.8)',
                   border: '1px solid #cc9900',
                   color: '#ffe066',
-                  borderRadius: 6,
-                  fontSize: 10,
-                  fontWeight: 700,
-                  padding: '4px 8px',
-                  minHeight: 28,
-                  cursor: 'pointer',
-                  WebkitTapHighlightColor: 'transparent',
+                  borderRadius: 6, fontSize: 9, fontWeight: 700,
+                  padding: '0 5px', height: 36,
+                  cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
                   boxShadow: '0 0 8px rgba(200,150,0,0.45)',
-                  whiteSpace: 'nowrap',
+                  whiteSpace: 'nowrap', lineHeight: 1.25,
+                  display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', justifyContent: 'center',
                 }}
               >
-                ⚡ גל הבא +${state.earlyWaveBonus}
+                <span>⚡גל הבא</span>
+                <span>+${state.earlyWaveBonus}</span>
               </button>
             )}
             {state.airStrikeCharges > 0 && (
-              <button onPointerDown={airStrike} style={{ background: 'rgba(180,40,20,0.7)', border: '1px solid #cc4422', color: '#ffaaaa', borderRadius: 5, fontSize: 10, padding: '3px 8px', minHeight: 26, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}>
+              <button
+                onPointerDown={airStrike}
+                style={{
+                  background: 'rgba(180,40,20,0.7)', border: '1px solid #cc4422',
+                  color: '#ffaaaa', borderRadius: 5, fontSize: 10,
+                  padding: '0 6px', height: 30,
+                  cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
+                }}
+              >
                 ✈({state.airStrikeCharges})
               </button>
             )}
             {state.empCharges > 0 && (
-              <button onPointerDown={empBlast} style={{ background: 'rgba(20,60,200,0.7)', border: '1px solid #4466cc', color: '#aabbff', borderRadius: 5, fontSize: 10, padding: '3px 8px', minHeight: 26, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}>
+              <button
+                onPointerDown={empBlast}
+                style={{
+                  background: 'rgba(20,60,200,0.7)', border: '1px solid #4466cc',
+                  color: '#aabbff', borderRadius: 5, fontSize: 10,
+                  padding: '0 6px', height: 30,
+                  cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
+                }}
+              >
                 ⚡({state.empCharges})
               </button>
             )}
           </div>
         </div>
-
-        {/* ── Tower shop (build + wave) ── */}
-        {showShop && (
-          <div
-            className="flex gap-1 px-1.5 py-1 overflow-x-auto pointer-events-auto"
-            style={{
-              background: 'rgba(0,15,0,0.88)',
-              borderBottom: '1px solid rgba(80,200,80,0.15)',
-              backdropFilter: 'blur(4px)',
-              WebkitOverflowScrolling: 'touch',
-              scrollbarWidth: 'none',
-            }}
-          >
-            {Object.values(TOWER_DEFS).map((def) => {
-              const sel       = selectedTower === def.type;
-              const canAfford = state.gold >= def.cost;
-              const accentColor = TOWER_COLORS[def.type] ?? '#aaaaaa';
-              return (
-                <button
-                  key={def.type}
-                  disabled={!canAfford}
-                  onPointerDown={() => selectTower(sel ? null : def.type)}
-                  style={{
-                    flexShrink: 0,
-                    minWidth: 58,
-                    minHeight: 48,
-                    padding: '3px 6px',
-                    borderRadius: 7,
-                    border: `1px solid ${sel ? '#ffd700' : 'rgba(255,255,255,0.12)'}`,
-                    borderLeft: `3px solid ${accentColor}`,
-                    background: sel
-                      ? `rgba(${hexToRgb(accentColor)},0.22)`
-                      : canAfford
-                        ? 'rgba(255,255,255,0.06)'
-                        : 'rgba(255,255,255,0.02)',
-                    opacity: canAfford ? 1 : 0.35,
-                    cursor: canAfford ? 'pointer' : 'not-allowed',
-                    WebkitTapHighlightColor: 'transparent',
-                    boxShadow: sel ? `0 0 12px ${accentColor}44` : 'none',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 1,
-                    transition: 'box-shadow 0.15s',
-                  }}
-                >
-                  <span style={{ fontSize: 15, lineHeight: 1 }}>{TOWER_ICONS[def.type] ?? '🗼'}</span>
-                  <span style={{ color: '#e5e7eb', fontSize: 9, fontWeight: 700, lineHeight: 1.2 }}>{TOWER_NAMES_HE[def.type] ?? def.type}</span>
-                  <span style={{ color: canAfford ? '#ffd700' : '#888', fontSize: 9, lineHeight: 1, fontWeight: 700 }}>${def.cost}</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
       </div>
+
+      {/* Perfect wave bonus toast */}
+      {perfectToast > 0 && (
+        <div
+          className="pointer-events-none"
+          style={{
+            position: 'fixed',
+            top: 58,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'rgba(0,150,0,0.92)',
+            color: '#ccffcc',
+            borderRadius: 10,
+            padding: '5px 20px',
+            fontSize: 12,
+            fontWeight: 800,
+            zIndex: 30,
+            whiteSpace: 'nowrap',
+            boxShadow: '0 2px 20px rgba(0,200,0,0.45)',
+            backdropFilter: 'blur(4px)',
+            border: '1px solid rgba(0,220,0,0.3)',
+            letterSpacing: '0.02em',
+          }}
+        >
+          ✨ גל מושלם! +${perfectToast} זהב
+        </div>
+      )}
 
       {/* ── Tower upgrade / sell sheet ── */}
       {upgradeTowerData && (() => {
