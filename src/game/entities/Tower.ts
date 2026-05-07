@@ -20,6 +20,10 @@ export class Tower {
   fireRateMultiplier: number = 1.0;
   rangeMultiplier: number = 1.0;
 
+  // upgrade tracking
+  baseCost: number;
+  upgrades: number = 0;
+
   constructor(def: TowerDef, pos: Vec2) {
     this.id = _nextTowerId++;
     this.type = def.type;
@@ -30,9 +34,16 @@ export class Tower {
     this.projectileSpeed = def.projectileSpeed;
     this.aoeRadius = def.aoeRadius ?? 0;
     this.fireCooldown = 0;
+    this.baseCost = def.cost;
   }
 
   get effectiveRange() { return this.range * this.rangeMultiplier; }
   get effectiveDamage() { return this.damage * this.damageMultiplier; }
   get effectiveFireRate() { return this.fireRate * this.fireRateMultiplier; }
+
+  get upgradeCost(): number {
+    if (this.upgrades >= 3) return 0;
+    const multipliers = [1.5, 2.0, 3.0];
+    return Math.round(this.baseCost * multipliers[this.upgrades]);
+  }
 }

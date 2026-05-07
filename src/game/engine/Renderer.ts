@@ -10,26 +10,26 @@ export const TILE = BALANCE.TILE_SIZE;
 // ── Color tables ────────────────────────────────────────────────────────────
 
 const EC: Record<string, number> = {
-  Walker:     0x55aa55,
-  Runner:     0x77dd33,
-  Tank:       0x888855,
-  Spitter:    0xaacc00,
-  Crawler:    0x336633,
-  Screamer:   0xee8800,
-  Bloater:    0x8855cc,
-  Alpha:      0xff5500,
-  PatientZero:0xdd1111,
+  Walker:      0x44ee44,
+  Runner:      0x88ff22,
+  Tank:        0xaaaa33,
+  Spitter:     0x22ddaa,
+  Crawler:     0x22aa55,
+  Screamer:    0xff9900,
+  Bloater:     0xcc44ff,
+  Alpha:       0xff7700,
+  PatientZero: 0xff2222,
 };
 
 const TC: Record<string, number> = {
-  Rifleman:    0x3377cc,
-  Shotgunner:  0xcc5522,
-  Sniper:      0x22aacc,
-  MachineGun:  0xcc2222,
-  Flamethrower:0xff5500,
-  Mortar:      0x888888,
-  BarbedWire:  0x999933,
-  Watchtower:  0x22bb77,
+  Rifleman:    0x44aaff,
+  Shotgunner:  0xff7722,
+  Sniper:      0x22ffee,
+  MachineGun:  0xff3344,
+  Flamethrower:0xff9900,
+  Mortar:      0x8899cc,
+  BarbedWire:  0xeecc22,
+  Watchtower:  0x44ee88,
 };
 
 function enemyRadius(t: string): number {
@@ -68,6 +68,8 @@ interface TowerSprite {
   popTimer: number;
   recoilTimer: number;
   recoilMax: number;
+  upgradeLevel: number;
+  starsContainer: Container;
 }
 
 interface Trail {
@@ -96,6 +98,9 @@ interface DmgNum {
 export class Renderer {
   private app: Application | null = null;
 
+  // gameContainer holds all game layers and is scaled to fit the viewport
+  private gameContainer = new Container();
+
   private pathLayer       = new Container();
   private towerLayer      = new Container();
   private enemyLayer      = new Container();
@@ -109,6 +114,11 @@ export class Renderer {
   private particles: Particle[] = [];
   private dmgNums: DmgNum[] = [];
 
+  // Viewport scaling for toGameCoords
+  private _gameScale   = 1;
+  private _gameOffsetX = 0;
+  private _gameOffsetY = 0;
+
   // Screen shake
   private shakeAmt  = 0;
   private shakeDur  = 0;
@@ -119,30 +129,110 @@ export class Renderer {
   private bannerTimer = 0;
   private bannerDur   = 0;
 
-  async init(el: HTMLElement): Promise<void> {
+  // Resize listener cleanup
+  private _resizeHandler: (() => void) | null = null;
+
+  async init(container: HTMLElement): Promise<void> {
+    const resolution = Math.min(window.devicePixelRatio || 1, 2);
+
     this.app = new Application();
-    await this.app.init({ width: CANVAS_W, height: CANVAS_H, backgroundColor: 0x0e0e0e, antialias: true });
-    el.appendChild(this.app.canvas);
-    this.app.stage.addChild(
+    await this.app.init({
+      resizeTo: container,
+      resolution,
+      autoDensity: true,
+      backgroundColor: 0x1a4a0a,
+      antialias: true,
+    });
+
+    container.appendChild(this.app.canvas);
+
+    // Set canvas style to fill container
+    const canvas = this.app.canvas as HTMLCanvasElement;
+    canvas.style.position = 'absolute';
+    canvas.style.inset = '0';
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+
+    this.app.stage.addChild(this.gameContainer);
+    this.gameContainer.addChild(
       this.pathLayer, this.towerLayer, this.enemyLayer,
       this.projectileLayer, this.particleLayer, this.uiLayer,
     );
+
     this.drawPath();
+    this.updateViewport();
+
+    this._resizeHandler = () => this.updateViewport();
+    window.addEventListener('resize', this._resizeHandler);
   }
 
-  // ── Static path ────────────────────────────────────────────────────────
+  private updateViewport(): void {
+    if (!this.app) return;
+    const vw = this.app.renderer.width  / (window.devicePixelRatio || 1);
+    const vh = this.app.renderer.height / (window.devicePixelRatio || 1);
+    const scale = Math.min(vw / CANVAS_W, vh / CANVAS_H);
+    const offsetX = (vw - CANVAS_W * scale) / 2;
+    const offsetY = (vh - CANVAS_H * scale) / 2;
+    this._gameScale   = scale;
+    this._gameOffsetX = offsetX;
+    this._gameOffsetY = offsetY;
+    this.gameContainer.scale.set(scale);
+    this.gameContainer.position.set(offsetX, offsetY);
+  }
+
+  /** Convert screen/client coordinates to game-space coordinates (800x500 units) */
+  toGameCoords(clientX: number, clientY: number): { x: number; y: number } {
+    if (!this.app) return { x: 0, y: 0 };
+    const canvas = this.app.canvas as HTMLCanvasElement;
+    const rect = canvas.getBoundingClientRect();
+    // Map from client space to CSS canvas space, then to game space
+    const cssX = clientX - rect.left;
+    const cssY = clientY - rect.top;
+    const x = (cssX - this._gameOffsetX) / this._gameScale;
+    const y = (cssY - this._gameOffsetY) / this._gameScale;
+    return { x, y };
+  }
+
+  // ── Static path + background ──────────────────────────────────────────────
 
   private drawPath(): void {
     const g = new Graphics();
 
-    // Grid dots (subtle)
-    for (let x = 0; x <= CANVAS_W; x += TILE) {
-      for (let y = 0; y <= CANVAS_H; y += TILE) {
-        g.circle(x, y, 0.8).fill({ color: 0x222222 });
-      }
+    // Bright green grass background
+    g.rect(0, 0, CANVAS_W, CANVAS_H).fill({ color: 0x2e6b12 });
+
+    // Grass texture patches (lighter/darker circles)
+    const rng = mulberry32(42);
+    for (let i = 0; i < 120; i++) {
+      const px = rng() * CANVAS_W;
+      const py = rng() * CANVAS_H;
+      const r2 = 8 + rng() * 28;
+      const lighter = rng() > 0.5;
+      const col = lighter ? 0x3d8a18 : 0x235510;
+      g.circle(px, py, r2).fill({ color: col, alpha: 0.45 });
     }
 
-    // Path layers
+    // Decorative trees/bushes (dark green circles) away from path
+    const treeRng = mulberry32(99);
+    const treePositions = [
+      { x: 60,  y: 40  }, { x: 200, y: 40  }, { x: 380, y: 40  },
+      { x: 550, y: 40  }, { x: 720, y: 40  }, { x: 60,  y: 460 },
+      { x: 200, y: 460 }, { x: 380, y: 460 }, { x: 550, y: 460 },
+      { x: 720, y: 460 }, { x: 740, y: 300 }, { x: 60,  y: 300 },
+      { x: 400, y: 200 }, { x: 260, y: 400 }, { x: 560, y: 240 },
+      { x: 100, y: 380 }, { x: 440, y: 440 }, { x: 680, y: 440 },
+    ];
+    for (const pos of treePositions) {
+      const sz = 10 + treeRng() * 10;
+      // Dark green bush/tree
+      g.circle(pos.x, pos.y, sz).fill({ color: 0x1a4d08 });
+      g.circle(pos.x - sz*0.3, pos.y - sz*0.2, sz*0.65).fill({ color: 0x236610 });
+      g.circle(pos.x + sz*0.25, pos.y - sz*0.15, sz*0.55).fill({ color: 0x1e5c0e });
+      // Highlight
+      g.circle(pos.x - sz*0.15, pos.y - sz*0.35, sz*0.3).fill({ color: 0x3a8020, alpha: 0.5 });
+    }
+
+    // Path layers: dark edge → main sand → lighter center stripe
     const pts = PATH_WAYPOINTS;
     const stroke = (w: number, color: number, alpha = 1) => {
       g.setStrokeStyle({ width: w, color, alpha });
@@ -150,38 +240,37 @@ export class Renderer {
       for (let i = 1; i < pts.length; i++) g.lineTo(pts[i].x, pts[i].y);
       g.stroke();
     };
-    stroke(TILE * 1.0,  0x130f07);
-    stroke(TILE * 0.82, 0x3b2810);
-    stroke(TILE * 0.65, 0x4e3518);
-    stroke(4,           0x6b4c26, 0.45); // centre highlight
+    stroke(TILE * 1.1,  0x8a5c1a);          // dark earthy edge
+    stroke(TILE * 0.90, 0xc49030);           // main sandy path
+    stroke(TILE * 0.55, 0xd4a840);           // slightly lighter
+    stroke(6,           0xe0b050, 0.7);      // center highlight stripe
 
-    // Gravel: random dots on path area (static, drawn once)
-    // We approximate by sprinkling dots near waypoints
+    // Gravel dots on path
     for (let i = 0; i < pts.length - 1; i++) {
       const ax = pts[i].x, ay = pts[i].y, bx = pts[i+1].x, by = pts[i+1].y;
       const steps = Math.ceil(Math.hypot(bx-ax, by-ay) / 8);
       for (let s = 0; s <= steps; s++) {
         const t2 = s / steps;
-        const cx = ax + (bx-ax)*t2 + (Math.random()-0.5)*TILE*0.5;
-        const cy = ay + (by-ay)*t2 + (Math.random()-0.5)*TILE*0.5;
+        const cx = ax + (bx-ax)*t2 + (Math.random()-0.5)*TILE*0.45;
+        const cy = ay + (by-ay)*t2 + (Math.random()-0.5)*TILE*0.45;
         const r  = 0.8 + Math.random() * 1.2;
-        const luma = 0x40 + Math.floor(Math.random()*0x18);
-        g.circle(cx, cy, r).fill({ color: (luma<<16)|(luma*0.9<<8)|Math.floor(luma*0.7) });
+        const luma = 0x90 + Math.floor(Math.random()*0x20);
+        const col2 = (luma<<16) | (Math.floor(luma*0.82)<<8) | Math.floor(luma*0.55);
+        g.circle(cx, cy, r).fill({ color: col2 });
       }
     }
 
-    // Start
+    // Start marker
     const s = pts[0];
     g.circle(s.x, s.y, 10).fill({ color: 0x22c55e });
     g.setStrokeStyle({ width: 2, color: 0x166534 }); g.circle(s.x, s.y, 10).stroke();
-    g.rect(s.x - 1.5, s.y - 14, 3, 14).fill({ color: 0x166534 }); // flag pole
+    g.rect(s.x - 1.5, s.y - 14, 3, 14).fill({ color: 0x166534 });
     g.poly([s.x+1.5, s.y-14, s.x+9, s.y-10, s.x+1.5, s.y-7]).fill({ color: 0x22c55e });
 
-    // End (base / danger marker)
+    // End marker
     const e = pts[pts.length - 1];
     g.circle(e.x, e.y, 10).fill({ color: 0xdc2626 });
     g.setStrokeStyle({ width: 2, color: 0x7f1d1d }); g.circle(e.x, e.y, 10).stroke();
-    // X marks
     g.setStrokeStyle({ width: 2.5, color: 0x7f1d1d });
     g.moveTo(e.x-5, e.y-5).lineTo(e.x+5, e.y+5).stroke();
     g.moveTo(e.x+5, e.y-5).lineTo(e.x-5, e.y+5).stroke();
@@ -216,11 +305,11 @@ export class Renderer {
       this.shakeDur -= dt;
       const pct = this.shakeDur / this.shakeMax;
       const amt = this.shakeAmt * pct;
-      this.app.stage.x = (Math.random() - 0.5) * amt * 2;
-      this.app.stage.y = (Math.random() - 0.5) * amt * 2;
+      this.gameContainer.x = this._gameOffsetX + (Math.random() - 0.5) * amt * 2;
+      this.gameContainer.y = this._gameOffsetY + (Math.random() - 0.5) * amt * 2;
     } else {
-      this.app.stage.x = 0;
-      this.app.stage.y = 0;
+      this.gameContainer.x = this._gameOffsetX;
+      this.gameContainer.y = this._gameOffsetY;
     }
   }
 
@@ -253,13 +342,12 @@ export class Renderer {
     this.bannerTimer -= dt;
     if (this.bannerTimer <= 0) { this.uiLayer.removeChild(this.banner); this.banner = null; return; }
     const remaining = this.bannerTimer / this.bannerDur;
-    // Fade in 0.25s, hold, fade out 0.5s
     const fadeIn  = (this.bannerDur - this.bannerTimer) / 0.25;
     const fadeOut = this.bannerTimer / 0.5;
     this.banner.alpha = Math.min(1, fadeIn, fadeOut);
     const s = 0.6 + 0.4 * Math.min(1, fadeIn);
     this.banner.scale.set(s);
-    void remaining; // used indirectly
+    void remaining;
   }
 
   // ── TOWERS ──────────────────────────────────────────────────────────────
@@ -304,7 +392,6 @@ export class Renderer {
       if (sp.recoilTimer > 0) {
         sp.recoilTimer -= dt;
         const t2 = sp.recoilTimer / sp.recoilMax;
-        // Push back then spring forward
         const offset = t2 > 0.5 ? (1-t2)/0.5 * 4 : (t2/0.5) * 4;
         sp.barrel.position.y = offset;
       } else {
@@ -316,10 +403,35 @@ export class Renderer {
         sp.muzzleTimer -= dt;
         sp.muzzle.alpha = Math.max(0, sp.muzzleTimer / MUZZLE_DUR);
       }
+
+      // Upgrade stars
+      if (tower.upgrades !== sp.upgradeLevel) {
+        sp.upgradeLevel = tower.upgrades;
+        this.updateStars(sp, tower.upgrades);
+      }
     }
 
     for (const [id, sp] of this.towerSprites) {
       if (!ids.has(id)) { this.towerLayer.removeChild(sp.container); this.towerSprites.delete(id); }
+    }
+  }
+
+  private updateStars(sp: TowerSprite, level: number): void {
+    sp.starsContainer.removeChildren();
+    if (level <= 0) return;
+    const starSize = 9;
+    const gap = 10;
+    const totalW = level * gap;
+    for (let i = 0; i < level; i++) {
+      const star = new Text({ text: '★', style: {
+        fontFamily: 'Arial',
+        fontSize: starSize,
+        fontWeight: '900',
+        fill: 0xffd700,
+      }});
+      star.anchor.set(0.5, 0);
+      star.position.set(-totalW/2 + gap/2 + i * gap, TILE * 0.5);
+      sp.starsContainer.addChild(star);
     }
   }
 
@@ -329,7 +441,7 @@ export class Renderer {
 
     // Range ring
     const ring = new Graphics();
-    ring.setStrokeStyle({ width: 1, color: 0xffffff, alpha: 0.06 });
+    ring.setStrokeStyle({ width: 1, color: 0xffffff, alpha: 0.08 });
     ring.circle(0, 0, range).stroke();
     cont.addChild(ring);
 
@@ -338,43 +450,38 @@ export class Renderer {
     const half = TILE * 0.38;
     switch (type) {
       case 'Sniper':
-        // Tall slim hexagon
         base.poly([-half*0.7,-half, half*0.7,-half, half,-0, half*0.7,half, -half*0.7,half, -half,0]).fill({ color });
         break;
       case 'Mortar':
-        // Wide heavy circle
         base.circle(0, 0, TILE*0.42).fill({ color });
-        base.circle(0, 0, TILE*0.28).fill({ color: 0x555555 });
+        base.circle(0, 0, TILE*0.28).fill({ color: 0x555577 });
         break;
       case 'BarbedWire': {
-        // X spikes — no barrel
-        base.setStrokeStyle({ width: 4, color: 0xcccc44 });
+        base.setStrokeStyle({ width: 4, color: 0xeecc22 });
         [-45,-135,45,135].forEach(a => {
           const rad = a * Math.PI/180;
           base.moveTo(0,0).lineTo(Math.cos(rad)*TILE*0.45, Math.sin(rad)*TILE*0.45);
         });
         base.stroke();
-        base.circle(0,0,4).fill({ color: 0xffff66 });
+        base.circle(0,0,4).fill({ color: 0xffff88 });
         break;
       }
       case 'Watchtower':
-        // Tall rectangular tower
         base.roundRect(-half*0.55, -half*1.1, half*1.1, half*2.2, 3).fill({ color });
-        base.roundRect(-half*0.7, half*0.5, half*1.4, half*0.8, 2).fill({ color: adjustColor(color, 0.8) }); // platform
+        base.roundRect(-half*0.7, half*0.5, half*1.4, half*0.8, 2).fill({ color: adjustColor(color, 0.8) });
         break;
       case 'Flamethrower':
-        // Round base
         base.circle(0, 0, TILE*0.38).fill({ color });
         base.circle(0, 0, TILE*0.23).fill({ color: adjustColor(color, 0.7) });
         break;
       default:
         base.roundRect(-half, -half, half*2, half*2, 5).fill({ color });
     }
-    // Outline
-    base.setStrokeStyle({ width: 1.5, color: 0x000000, alpha: 0.5 });
+    // Thick outline for cartoon look
+    base.setStrokeStyle({ width: 2.5, color: 0x000000, alpha: 0.6 });
     base.circle(0, 0, half * 1.1).stroke();
     // Highlight
-    base.setStrokeStyle({ width: 1, color: 0xffffff, alpha: 0.12 });
+    base.setStrokeStyle({ width: 1.5, color: 0xffffff, alpha: 0.18 });
     base.circle(-half*0.3, -half*0.3, half*0.5).stroke();
     cont.addChild(base);
 
@@ -394,40 +501,43 @@ export class Renderer {
     barrel.addChild(muzzle);
     cont.addChild(barrel);
 
-    return { container: cont, barrel, muzzle, muzzleTimer: 0, angle: -Math.PI/2, popTimer: SPAWN_DUR, recoilTimer: 0, recoilMax: RECOIL_DUR };
+    // Stars container (shown below tower)
+    const starsContainer = new Container();
+    cont.addChild(starsContainer);
+
+    return {
+      container: cont, barrel, muzzle,
+      muzzleTimer: 0, angle: -Math.PI/2,
+      popTimer: SPAWN_DUR, recoilTimer: 0, recoilMax: RECOIL_DUR,
+      upgradeLevel: 0, starsContainer,
+    };
   }
 
   private drawBarrel(g: Graphics, type: string): void {
     switch (type) {
       case 'Shotgunner':
-        // Short fat barrel, fan tip
         g.roundRect(-5, -TILE*0.38, 10, TILE*0.34, 2).fill({ color: 0xdddddd });
         g.poly([-8, -TILE*0.38, 8, -TILE*0.38, 11, -TILE*0.47, -11, -TILE*0.47]).fill({ color: 0xcccccc });
         break;
       case 'Sniper':
-        // Very long thin barrel
         g.roundRect(-2, -TILE*0.62, 4, TILE*0.56, 1).fill({ color: 0xdddddd });
-        g.circle(0, -TILE*0.62, 3).fill({ color: 0x555555 }); // scope hint
+        g.circle(0, -TILE*0.62, 3).fill({ color: 0x555555 });
         break;
       case 'MachineGun': {
-        // 3 parallel thin barrels
         [-3.5, 0, 3.5].forEach(ox => {
           g.roundRect(ox-1.5, -TILE*0.44, 3, TILE*0.38, 1).fill({ color: 0xcccccc });
         });
         break;
       }
       case 'Flamethrower':
-        // Cone nozzle
         g.poly([-4, -TILE*0.02, 4, -TILE*0.02, 7, -TILE*0.44, -7, -TILE*0.44]).fill({ color: 0xdd8844 });
         g.roundRect(-3, -TILE*0.44, 6, TILE*0.12, 2).fill({ color: 0xffaa44 });
         break;
       case 'Mortar':
-        // Short stubby
         g.roundRect(-6, -TILE*0.30, 12, TILE*0.26, 3).fill({ color: 0xbbbbbb });
-        g.circle(0, -TILE*0.30, 6).fill({ color: 0x444444 }); // muzzle end
+        g.circle(0, -TILE*0.30, 6).fill({ color: 0x444444 });
         break;
       default:
-        // Standard rifle barrel
         g.roundRect(-3.5, -TILE*0.44, 7, TILE*0.40, 2).fill({ color: 0xdddddd });
     }
   }
@@ -494,8 +604,8 @@ export class Renderer {
       const r2 = enemyRadius(en.type);
       const bW = r2 * 2.8;
       const ratio = Math.max(0, en.hp / en.maxHp);
-      const hpC = ratio > 0.6 ? 0x22c55e : ratio > 0.3 ? 0xf59e0b : 0xef4444;
-      sp.hpFg.clear().roundRect(-bW/2, -r2-9, bW*ratio, 4, 2).fill({ color: hpC });
+      const hpC = ratio > 0.6 ? 0x22ee66 : ratio > 0.3 ? 0xffcc00 : 0xff3333;
+      sp.hpFg.clear().roundRect(-bW/2, -r2-10, bW*ratio, 5, 2.5).fill({ color: hpC });
     }
 
     for (const [id, sp] of this.enemySprites) {
@@ -510,82 +620,74 @@ export class Renderer {
 
     // Drop shadow
     const shadow = new Graphics();
-    shadow.ellipse(1, r*0.85, r*0.85, r*0.28).fill({ color: 0x000000, alpha: 0.28 });
+    shadow.ellipse(1, r*0.85, r*0.85, r*0.28).fill({ color: 0x000000, alpha: 0.35 });
     cont.addChild(shadow);
 
     const body = new Graphics();
     this.drawEnemyBody(body, type, r, color);
     cont.addChild(body);
 
-    // HP bar
+    // HP bar (larger, more visible)
     const bW = r * 2.8;
     const hpBg = new Graphics();
-    hpBg.roundRect(-bW/2, -r-9, bW, 4, 2).fill({ color: 0x0a0a0a });
+    hpBg.roundRect(-bW/2, -r-10, bW, 5, 2.5).fill({ color: 0x111111 });
     cont.addChild(hpBg);
     const hpFg = new Graphics();
-    hpFg.roundRect(-bW/2, -r-9, bW, 4, 2).fill({ color: 0x22c55e });
+    hpFg.roundRect(-bW/2, -r-10, bW, 5, 2.5).fill({ color: 0x22ee66 });
     cont.addChild(hpFg);
 
     return { container: cont, body, hpFg, prevHp: 0, flashTimer: 0, bobTimer: 0, isDying: false, deathTimer: 0 };
   }
 
   private drawEnemyBody(g: Graphics, type: string, r: number, color: number): void {
-    const dark = adjustColor(color, 0.6);
+    const dark = adjustColor(color, 0.55);
 
     switch (type) {
       case 'Walker': {
-        // Humanoid: head + body + zombie eyes
-        g.roundRect(-r*0.48, -r*0.1, r*0.96, r*1.0, 2).fill({ color });     // body
-        g.circle(0, -r*0.45, r*0.52).fill({ color });                         // head
+        g.roundRect(-r*0.48, -r*0.1, r*0.96, r*1.0, 2).fill({ color });
+        g.circle(0, -r*0.45, r*0.52).fill({ color });
         // eyes
         g.circle(-r*0.2, -r*0.5, r*0.13).fill({ color: 0xffffff });
         g.circle( r*0.2, -r*0.5, r*0.13).fill({ color: 0xffffff });
-        g.circle(-r*0.2, -r*0.5, r*0.07).fill({ color: 0xcc0000 });
-        g.circle( r*0.2, -r*0.5, r*0.07).fill({ color: 0xcc0000 });
+        g.circle(-r*0.2, -r*0.5, r*0.07).fill({ color: 0xff0000 });
+        g.circle( r*0.2, -r*0.5, r*0.07).fill({ color: 0xff0000 });
         break;
       }
       case 'Runner': {
-        // Lean ellipse, angled arms
         g.ellipse(0, 0, r*0.65, r).fill({ color });
-        g.circle(0, -r*0.62, r*0.38).fill({ color });                         // head
-        g.ellipse(-r*0.7, 0, r*0.18, r*0.5).fill({ color: dark });           // left arm
+        g.circle(0, -r*0.62, r*0.38).fill({ color });
+        g.ellipse(-r*0.7, 0, r*0.18, r*0.5).fill({ color: dark });
         break;
       }
       case 'Tank': {
-        // Wide armoured block
         g.roundRect(-r, -r*0.7, r*2, r*1.4, 4).fill({ color });
-        g.circle(0, -r*0.55, r*0.35).fill({ color: dark });                   // head
-        // Armour lines
-        g.setStrokeStyle({ width: 2, color: dark, alpha: 0.7 });
+        g.circle(0, -r*0.55, r*0.35).fill({ color: dark });
+        g.setStrokeStyle({ width: 2.5, color: dark, alpha: 0.8 });
         g.moveTo(-r*0.8, 0).lineTo(r*0.8, 0).stroke();
         g.moveTo(-r*0.8, r*0.4).lineTo(r*0.8, r*0.4).stroke();
         break;
       }
       case 'Spitter': {
         g.circle(0, 0, r).fill({ color });
-        // Dripping mouth
-        g.circle(0, r*0.35, r*0.3).fill({ color: 0x88cc00 });
-        g.ellipse(0, r*0.78, r*0.1, r*0.25).fill({ color: 0x88cc00 });       // drip
-        g.circle(-r*0.3, -r*0.25, r*0.14).fill({ color: 0x000000 });         // eyes
+        g.circle(0, r*0.35, r*0.3).fill({ color: 0x44ff00 });
+        g.ellipse(0, r*0.78, r*0.1, r*0.25).fill({ color: 0x44ff00 });
+        g.circle(-r*0.3, -r*0.25, r*0.14).fill({ color: 0x000000 });
         g.circle( r*0.3, -r*0.25, r*0.14).fill({ color: 0x000000 });
         break;
       }
       case 'Crawler': {
-        // Flat wide oval + legs
         g.ellipse(0, 0, r*1.3, r*0.65).fill({ color });
         for (let i = 0; i < 3; i++) {
           const xOff = (i-1) * r * 0.7;
-          g.roundRect(xOff-1.5, r*0.5, 3, r*0.5, 1).fill({ color: dark });  // leg
+          g.roundRect(xOff-1.5, r*0.5, 3, r*0.5, 1).fill({ color: dark });
           g.roundRect(xOff-1.5, -r,    3, r*0.5, 1).fill({ color: dark });
         }
         break;
       }
       case 'Screamer': {
         g.circle(0, 0, r).fill({ color });
-        // Open jaw
         g.ellipse(0, r*0.22, r*0.48, r*0.38).fill({ color: 0x111111 });
-        // Scream lines
-        g.setStrokeStyle({ width: 1.5, color: 0xffaa44, alpha: 0.6 });
+        g.setStrokeStyle({ width: 2, color: 0xffdd44, alpha: 0.7 });
         [-30,-15,0,15,30].forEach(deg => {
           const rad = deg * Math.PI/180;
           g.moveTo(Math.cos(rad)*r*1.1, Math.sin(rad)*r*1.1)
@@ -597,41 +699,38 @@ export class Renderer {
         break;
       }
       case 'Bloater': {
-        // Puffy circle with bumps
         g.circle(0, 0, r).fill({ color });
         for (let i = 0; i < 7; i++) {
           const a = (Math.PI*2*i)/7;
-          g.circle(Math.cos(a)*r*0.72, Math.sin(a)*r*0.72, r*0.22).fill({ color: adjustColor(color, 1.2) });
+          g.circle(Math.cos(a)*r*0.72, Math.sin(a)*r*0.72, r*0.22).fill({ color: adjustColor(color, 1.3) });
         }
-        g.circle(0, 0, r*0.25).fill({ color: 0x663399, alpha: 0.6 });        // core
+        g.circle(0, 0, r*0.25).fill({ color: 0x9933ff, alpha: 0.7 });
         break;
       }
       case 'Alpha': {
-        // Diamond / 4-pointed star
         g.poly([0,-r, r*0.6,-r*0.35, r*0.35,0, r*0.6,r*0.35, 0,r, -r*0.6,r*0.35, -r*0.35,0, -r*0.6,-r*0.35]).fill({ color });
-        g.circle(0, 0, r*0.32).fill({ color: 0xff8800 });                     // core
-        g.circle(0, 0, r*0.15).fill({ color: 0xffcc44 });
+        g.circle(0, 0, r*0.32).fill({ color: 0xff9900 });
+        g.circle(0, 0, r*0.15).fill({ color: 0xffdd44 });
         break;
       }
       case 'PatientZero': {
         g.circle(0, 0, r).fill({ color });
-        // Pulsing veins
-        g.setStrokeStyle({ width: 2, color: 0x880000, alpha: 0.7 });
+        g.setStrokeStyle({ width: 2.5, color: 0xaa0000, alpha: 0.8 });
         g.moveTo(-r*0.6, -r*0.5).lineTo(-r*0.2, 0).lineTo(-r*0.5, r*0.5).stroke();
         g.moveTo( r*0.6, -r*0.5).lineTo( r*0.2, 0).lineTo( r*0.5, r*0.5).stroke();
-        // Biohazard cross
-        g.rect(-r*0.12, -r*0.6, r*0.24, r*1.2).fill({ color: 0xff0000, alpha: 0.9 });
-        g.rect(-r*0.6, -r*0.12, r*1.2, r*0.24).fill({ color: 0xff0000, alpha: 0.9 });
-        g.circle(0, 0, r*0.22).fill({ color: 0xff0000 });
+        g.rect(-r*0.12, -r*0.6, r*0.24, r*1.2).fill({ color: 0xff2222, alpha: 0.95 });
+        g.rect(-r*0.6, -r*0.12, r*1.2, r*0.24).fill({ color: 0xff2222, alpha: 0.95 });
+        g.circle(0, 0, r*0.22).fill({ color: 0xff4444 });
         break;
       }
       default:
         g.circle(0, 0, r).fill({ color });
     }
 
-    // Common shine + outline
-    g.circle(-r*0.3, -r*0.3, r*0.2).fill({ color: 0xffffff, alpha: 0.14 });
-    g.setStrokeStyle({ width: 1.5, color: 0x000000, alpha: 0.4 });
+    // Common shine
+    g.circle(-r*0.3, -r*0.3, r*0.2).fill({ color: 0xffffff, alpha: 0.18 });
+    // Thicker cartoon outline (2px)
+    g.setStrokeStyle({ width: 2, color: 0x000000, alpha: 0.5 });
     g.circle(0, 0, r).stroke();
   }
 
@@ -729,6 +828,10 @@ export class Renderer {
   // ── Cleanup ──────────────────────────────────────────────────────────────
 
   destroy(): void {
+    if (this._resizeHandler) {
+      window.removeEventListener('resize', this._resizeHandler);
+      this._resizeHandler = null;
+    }
     this.app?.destroy(true);
     this.app = null;
     this.enemySprites.clear();
@@ -746,4 +849,16 @@ function adjustColor(hex: number, factor: number): number {
   const g = Math.min(255, Math.round(((hex >>  8) & 0xff) * factor));
   const b = Math.min(255, Math.round( (hex        & 0xff) * factor));
   return (r << 16) | (g << 8) | b;
+}
+
+/** Simple seeded RNG (mulberry32) for deterministic decorations */
+function mulberry32(seed: number): () => number {
+  let s = seed;
+  return () => {
+    s += 0x6d2b79f5;
+    let t = s;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }

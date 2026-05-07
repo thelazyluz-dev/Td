@@ -202,7 +202,22 @@ export class GameEngine {
     const def = TOWER_DEFS[type];
     if (!def) return false;
     if (!this.economySystem.spend(def.cost)) return false;
-    this.towers.push(new Tower(def, pos));
+    const tower = new Tower(def, pos);
+    this.towers.push(tower);
+    this.emit();
+    return true;
+  }
+
+  upgradeTower(towerId: number): boolean {
+    const tower = this.towers.find(t => t.id === towerId);
+    if (!tower) return false;
+    if (tower.upgrades >= 3) return false;
+    const cost = tower.upgradeCost;
+    if (!this.economySystem.spend(cost)) return false;
+    tower.upgrades++;
+    tower.damageMultiplier = 1 + tower.upgrades * 0.5;
+    tower.rangeMultiplier = 1 + tower.upgrades * 0.1;
+    tower.fireRateMultiplier = 1 + tower.upgrades * 0.2;
     this.emit();
     return true;
   }

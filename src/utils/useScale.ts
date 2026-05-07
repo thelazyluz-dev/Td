@@ -3,23 +3,18 @@ import { useState, useEffect } from 'react';
 export const GAME_W = 800;
 export const GAME_H = 500;
 
-function compute() {
-  // visualViewport accounts for browser chrome (address bar, nav bar) on mobile
+function computePortrait() {
   const vp = window.visualViewport;
   const vw = vp ? vp.width  : window.innerWidth;
   const vh = vp ? vp.height : window.innerHeight;
-  return {
-    // 0.97 buffer ensures no 1px overflow from sub-pixel rounding
-    scale:     Math.min((vw / GAME_W) * 0.97, (vh / GAME_H) * 0.97),
-    isPortrait: vw < vh,
-  };
+  return { isPortrait: vw < vh };
 }
 
 export function useGameScale() {
-  const [state, setState] = useState(compute);
+  const [state, setState] = useState(computePortrait);
 
   useEffect(() => {
-    const update = () => setState(compute());
+    const update = () => setState(computePortrait());
     window.addEventListener('resize', update);
     window.addEventListener('orientationchange', update);
     window.visualViewport?.addEventListener('resize', update);
