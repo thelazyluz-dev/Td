@@ -134,6 +134,7 @@ export class Renderer {
   // Tower interaction callbacks
   private onTowerTap: ((id: number) => void) | null = null;
   private onEmptyTap: (() => void) | null = null;
+  private onStagePlacement: ((gx: number, gy: number) => void) | null = null;
   private _placementMode = false;
 
   // Base damage flash
@@ -179,11 +180,18 @@ export class Renderer {
     this.uiLayer.addChild(flashOverlay);
     this.baseFlashOverlay = flashOverlay;
 
-    // Stage background tap → deselect tower (only when not in placement mode)
+    // Stage tap: place tower (placement mode) OR deselect (select mode)
+    // Tower sprite pointerdown uses e.stopPropagation() so this won't fire for tower taps
     this.app.stage.eventMode = 'static';
     this.app.stage.hitArea = new Rectangle(0, 0, CANVAS_W, CANVAS_H);
-    this.app.stage.on('pointerdown', () => {
-      if (!this._placementMode) this.onEmptyTap?.();
+    this.app.stage.on('pointerdown', (e) => {
+      if (this._placementMode) {
+        const gx = (e.global.x - this._gameOffsetX) / this._gameScale;
+        const gy = (e.global.y - this._gameOffsetY) / this._gameScale;
+        this.onStagePlacement?.(gx, gy);
+      } else {
+        this.onEmptyTap?.();
+      }
     });
 
     // Use PixiJS renderer resize event (fires when resizeTo detects size change)
@@ -449,6 +457,7 @@ export class Renderer {
 
   setTowerTapHandler(fn: (id: number) => void): void { this.onTowerTap = fn; }
   setEmptyTapHandler(fn: () => void): void { this.onEmptyTap = fn; }
+  setStagePlacementHandler(fn: (gx: number, gy: number) => void): void { this.onStagePlacement = fn; }
   setPlacementMode(active: boolean): void { this._placementMode = active; }
 
   private tickShake(dt: number): void {

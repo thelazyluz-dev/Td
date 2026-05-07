@@ -13,13 +13,12 @@ export function GameCanvas() {
   const { state, placeTower, selectedTower, selectedUpgradeTowerId, selectForUpgrade } = useGameStore();
   stateRef.current = state ?? null;
 
-  // Keep refs so callbacks in PixiJS closures always see latest values
+  // Stable refs so PixiJS closures always see the latest values without stale captures
   const selectForUpgradeRef = useRef(selectForUpgrade);
   selectForUpgradeRef.current = selectForUpgrade;
-  const selectedTowerRef = useRef(selectedTower);
-  selectedTowerRef.current = selectedTower;
+  const placeTowerRef = useRef(placeTower);
+  placeTowerRef.current = placeTower;
 
-  // Sound + shake + wave banner driven by state diffs
   useGameEvents(rendererRef);
 
   // Init PixiJS + own RAF loop (decoupled from React)
@@ -28,9 +27,23 @@ export function GameCanvas() {
     const renderer = new Renderer();
     rendererRef.current = renderer;
     renderer.init(containerRef.current).then(() => {
-      // Wire PixiJS tower interaction after init completes
+      // Tower sprite tap → open upgrade panel
       renderer.setTowerTapHandler((id) => selectForUpgradeRef.current(id));
+
+      // Empty stage tap (no placement mode) → deselect
       renderer.setEmptyTapHandler(() => selectForUpgradeRef.current(null));
+
+      // Stage tap in placement mode → place tower.
+      // Because tower sprites call e.stopPropagation(), this handler is NEVER
+      // reached when tapping an existing tower — eliminating the double-action bug.
+      renderer.setStagePlacementHandler((gx, gy) => {
+        const s = stateRef.current;
+        if (!s || (s.phase !== 'build' && s.phase !== 'wave')) return;
+        const col = Math.floor(gx / TILE);
+        const row = Math.floor(gy / TILE);
+        if (isCellOnPath(col, row, TILE)) return;
+        placeTowerRef.current({ x: col * TILE + TILE / 2, y: row * TILE + TILE / 2 });
+      });
     });
 
     let rafId: number;
@@ -51,36 +64,14 @@ export function GameCanvas() {
     rendererRef.current?.setSelectedTower(selectedUpgradeTowerId ?? null);
   }, [selectedUpgradeTowerId]);
 
-  // Sync placement mode so PixiJS stage tap doesn't deselect while placing
+  // Tell renderer which mode it's in so stage tap routes correctly
   useEffect(() => {
     rendererRef.current?.setPlacementMode(selectedTower !== null);
   }, [selectedTower]);
 
-  // handleClick only handles tower placement — tower selection is via PixiJS
-  const handleClick = (clientX: number, clientY: number) => {
-    if (!selectedTowerRef.current) return;
-    const renderer = rendererRef.current;
-    if (!renderer) return;
-    const currentState = stateRef.current;
-    if (!currentState) return;
-    if (currentState.phase !== 'build' && currentState.phase !== 'wave') return;
-
-    const { x, y } = renderer.toGameCoords(clientX, clientY);
-    const col = Math.floor(x / TILE);
-    const row = Math.floor(y / TILE);
-    if (isCellOnPath(col, row, TILE)) return;
-    placeTower({ x: col * TILE + TILE / 2, y: row * TILE + TILE / 2 });
-  };
-
   return (
     <div
       ref={containerRef}
-      onClick={e => handleClick(e.clientX, e.clientY)}
-      onTouchEnd={e => {
-        e.preventDefault();
-        const t = e.changedTouches[0];
-        if (t) handleClick(t.clientX, t.clientY);
-      }}
       style={{
         position: 'absolute',
         inset: 0,
