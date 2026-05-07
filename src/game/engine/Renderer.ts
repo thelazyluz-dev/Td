@@ -161,13 +161,34 @@ export class Renderer {
 
   private updateViewport(): void {
     if (!this.app) return;
-    // app.screen gives logical CSS pixel dimensions (correct regardless of DPR)
     const vw = this.app.screen.width;
     const vh = this.app.screen.height;
     if (vw <= 0 || vh <= 0) return;
-    const scale = Math.min(vw / CANVAS_W, vh / CANVAS_H);
-    const offsetX = (vw - CANVAS_W * scale) / 2;
-    const offsetY = (vh - CANVAS_H * scale) / 2;
+
+    const scaleByW = vw / CANVAS_W;
+    const scaleByH = vh / CANVAS_H;
+    // If letterboxing by height would leave less than 72% of width used,
+    // switch to fill-width mode and center vertically on the path.
+    const fillRatio = (CANVAS_W * scaleByH) / vw;
+    let scale: number, offsetX: number, offsetY: number;
+    if (fillRatio >= 0.72) {
+      scale   = Math.min(scaleByW, scaleByH);
+      offsetX = (vw - CANVAS_W * scale) / 2;
+      offsetY = (vh - CANVAS_H * scale) / 2;
+    } else {
+      // Wide landscape phone: fill width, crop top/bottom grass
+      const pathMinY = Math.min(...PATH_WAYPOINTS.map(w => w.y));
+      const pathMaxY = Math.max(...PATH_WAYPOINTS.map(w => w.y));
+      const pathCenterY = (pathMinY + pathMaxY) / 2;
+      scale   = scaleByW;
+      offsetX = 0;
+      // Center on path midpoint; clamp so path endpoints stay on screen
+      const idealOffY = vh / 2 - pathCenterY * scale;
+      const minOffY   = vh - CANVAS_H * scale; // bottom edge in view
+      const maxOffY   = 0;                      // top edge in view
+      offsetY = Math.max(minOffY, Math.min(maxOffY, idealOffY));
+    }
+
     this._gameScale   = scale;
     this._gameOffsetX = offsetX;
     this._gameOffsetY = offsetY;
