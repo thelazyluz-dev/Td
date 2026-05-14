@@ -19,13 +19,6 @@ export function useSoundEffects(state: GameState | null) {
         else soundManager.waveClear();
       }
 
-      // Build countdown beeps (last 3 seconds)
-      if (state.phase === 'build' && prev.phase === 'build') {
-        const prevCeil = Math.ceil(prev.buildTimeLeft);
-        const curCeil = Math.ceil(state.buildTimeLeft);
-        if (curCeil !== prevCeil && curCeil <= 3 && curCeil > 0) soundManager.buildCountdown();
-      }
-
       // Wave start
       if (prev.phase === 'build' && state.phase === 'wave') soundManager.waveStart();
     }

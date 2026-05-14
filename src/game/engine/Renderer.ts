@@ -159,7 +159,12 @@ export class Renderer {
 
   private rings: Ring[] = [];
   private prevPhase: string | null = null;
+  private baseHpBarBg: Graphics | null = null;
   private baseHpBarFg: Graphics | null = null;
+  private _hpBarX = 742;
+  private _hpBarY = 142;
+  private readonly _hpBarW = 56;
+  private readonly _hpBarH = 7;
   private waveOverlay: Graphics | null = null;
   private waveOverlayText: Text | null = null;
   private waveOverlayTimer = 0;
@@ -214,14 +219,15 @@ export class Renderer {
     this.uiLayer.addChild(waveOvText);
     this.waveOverlayText = waveOvText;
 
-    // Base HP bar (above house sprite at right edge)
+    // Base HP bar (above house sprite, positioned dynamically per path variant)
     const hpBg = new Graphics();
-    hpBg.roundRect(742, 142, 56, 7, 3).fill({ color: 0x111111, alpha: 0.75 });
+    this.baseHpBarBg = hpBg;
     this.uiLayer.addChild(hpBg);
 
     const hpFg = new Graphics();
     this.uiLayer.addChild(hpFg);
     this.baseHpBarFg = hpFg;
+    this.positionHpBar();
 
     // Stage background tap → deselect (only when not placing)
     this.app.stage.eventMode = 'static';
@@ -478,6 +484,17 @@ export class Renderer {
   redrawPath(): void {
     this.pathLayer.removeChildren();
     this.drawPath();
+    this.positionHpBar();
+  }
+
+  private positionHpBar(): void {
+    const ep = PATH_WAYPOINTS[PATH_WAYPOINTS.length - 1];
+    this._hpBarX = ep.x - 58;
+    this._hpBarY = ep.y - 58;
+    if (this.baseHpBarBg) {
+      this.baseHpBarBg.clear();
+      this.baseHpBarBg.roundRect(this._hpBarX, this._hpBarY, this._hpBarW, this._hpBarH, 3).fill({ color: 0x111111, alpha: 0.75 });
+    }
   }
 
   // ── Public update (called from GameCanvas RAF loop) ────────────────────
@@ -1647,7 +1664,7 @@ export class Renderer {
     const ratio = Math.max(0, state.baseHp / state.baseMaxHp);
     const col = ratio > 0.6 ? 0x44ee88 : ratio > 0.3 ? 0xffcc22 : 0xff3333;
     this.baseHpBarFg.clear();
-    if (ratio > 0) this.baseHpBarFg.roundRect(742, 142, 56 * ratio, 7, 3).fill({ color: col });
+    if (ratio > 0) this.baseHpBarFg.roundRect(this._hpBarX, this._hpBarY, this._hpBarW * ratio, this._hpBarH, 3).fill({ color: col });
   }
 
   // ── Cleanup ──────────────────────────────────────────────────────────────

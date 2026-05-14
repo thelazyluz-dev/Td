@@ -5,7 +5,6 @@ import { WaveSystem } from '../systems/WaveSystem';
 import { CombatSystem, DEFAULT_COMBAT_UPGRADES, type CombatUpgrades } from '../systems/CombatSystem';
 import { EconomySystem } from '../systems/EconomySystem';
 import { TOWER_DEFS } from '../data/towers';
-import { BALANCE } from '../balance';
 import type { GamePhase, Vec2 } from '../entities/types';
 import type { SavedTower } from '../../utils/buildSave';
 import { setActivePath, PATH_VARIANTS } from './PathManager';
@@ -48,8 +47,7 @@ export class GameEngine {
   private baseMaxHp: number;
   // Highest 0-based wave index that has been committed (started or in build for)
   private committedWaveIdx: number = 0;
-  private earlyWaveSentThisRound: boolean = false;
-  private buildTimer: number = BALANCE.BUILD_PHASE_DURATION;
+  private buildTimer: number = 0;
   private upgrades: CombatUpgrades = { ...DEFAULT_COMBAT_UPGRADES };
   private surviveOnce = false;
   private airStrikeCharges = 0;
@@ -87,7 +85,7 @@ export class GameEngine {
   }
 
   getState(): GameState {
-    const canSend = this.phase === 'wave' && !this.earlyWaveSentThisRound;
+    const canSend = this.phase === 'wave';
     return {
       phase: this.phase,
       wave: this.committedWaveIdx + 1,
@@ -118,7 +116,7 @@ export class GameEngine {
     this.pathVariantIdx = Math.floor(Math.random() * PATH_VARIANTS.length);
     setActivePath(this.pathVariantIdx);
     this.phase = 'build';
-    this.buildTimer = BALANCE.BUILD_PHASE_DURATION;
+    this.buildTimer = 0;
     this.emit();
     this.rafId = requestAnimationFrame(this.loop);
   }
@@ -180,17 +178,12 @@ export class GameEngine {
     if (this.isPaused) this.resume(); else this.pause();
   }
 
-  private tickBuild(dt: number) {
-    this.buildTimer -= dt;
-    if (this.buildTimer <= 0) {
-      this.buildTimer = 0;
-      this.beginWave();
-    }
+  private tickBuild(_dt: number) {
+    // Build phase is player-controlled; wave starts only via skipBuild()
   }
 
   private beginWave() {
     this.phase = 'wave';
-    this.earlyWaveSentThisRound = false;
     this.baseDamagedThisWave = false;
     this.lastPerfectBonus = 0;
     this.waveKillsCount = 0;
@@ -262,7 +255,7 @@ export class GameEngine {
     this.lastWaveKills = this.waveKillsCount;
     this.lastWaveEscaped = this.enemies.filter(e => e.reachedEnd).length;
     this.committedWaveIdx++;
-    this.buildTimer = BALANCE.BUILD_PHASE_DURATION;
+    this.buildTimer = 0;
     this.phase = 'build';
   }
 
@@ -280,7 +273,6 @@ export class GameEngine {
   upgradeTower(towerId: number): boolean {
     const tower = this.towers.find(t => t.id === towerId);
     if (!tower) return false;
-    if (tower.upgrades === 0 && tower.branch === null) return false; // must pick branch first
     const cost = tower.upgradeCost;
     if (!this.economySystem.spend(cost)) return false;
     tower.totalSpent += cost;
@@ -331,8 +323,6 @@ export class GameEngine {
 
   sendNextWave() {
     if (this.phase !== 'wave') return;
-    if (this.earlyWaveSentThisRound) return;
-    this.earlyWaveSentThisRound = true;
     const earlyBonus = this.earlyWaveBonusAmount();
     this.committedWaveIdx++;
     this.economySystem.earn(earlyBonus, this.goldMult);
@@ -382,7 +372,7 @@ export class GameEngine {
   applyUpgrade(id: string) {
     console.log('upgrade applied:', id);
     this.phase = 'build';
-    this.buildTimer = BALANCE.BUILD_PHASE_DURATION;
+    this.buildTimer = 0;
     this.committedWaveIdx++;
     this.emit();
   }

@@ -94,7 +94,7 @@ export function HUD() {
   const {
     state, selectedTower, selectedUpgradeTowerId,
     selectTower, skipBuild, sendNextWave, airStrike, empBlast,
-    selectForUpgrade, upgradeTower, upgradeTowerBranch, sellTower,
+    selectForUpgrade, upgradeTower, sellTower,
     setSpeed, initEngine, togglePause,
     saveBuild, loadBuild,
   } = useGameStore();
@@ -190,34 +190,25 @@ export function HUD() {
               >
                 {confirmRestart ? '?' : '↺'}
               </button>
-              <span style={{ color: hpColor, fontSize: 11, fontFamily: 'monospace', fontWeight: 700 }}>
-                ♥ {state.baseHp}<span style={{ color: 'rgba(255,100,100,0.4)', fontSize: 9 }}>/{state.baseMaxHp}</span>
+              <span style={{ color: hpColor, fontSize: 15, fontFamily: 'monospace', fontWeight: 800 }}>
+                ♥ {state.baseHp}<span style={{ color: 'rgba(255,100,100,0.4)', fontSize: 11 }}>/{state.baseMaxHp}</span>
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 11 }}>
+              <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: 15 }}>
                 <span style={{ color: '#ffd700' }}>$</span>
                 <span style={{ color: '#ffe066' }}>{state.gold}</span>
               </span>
-              <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 11 }}>
-                <span style={{ color: '#66aaff', fontSize: 9 }}>גל</span>
+              <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: 15 }}>
+                <span style={{ color: '#66aaff', fontSize: 11 }}>גל </span>
                 <span style={{ color: '#88ccff' }}>{state.wave}</span>
                 {state.waveModifier === 'speed' && (
-                  <span style={{ color: '#ffcc00', fontSize: 8, marginRight: 2 }} title="גל מהיר"> ⚡</span>
+                  <span style={{ color: '#ffcc00', fontSize: 10, marginRight: 2 }} title="גל מהיר"> ⚡</span>
                 )}
                 {state.waveModifier === 'armor' && (
-                  <span style={{ color: '#aaddff', fontSize: 8, marginRight: 2 }} title="גל שריון"> 🛡</span>
+                  <span style={{ color: '#aaddff', fontSize: 10, marginRight: 2 }} title="גל שריון"> 🛡</span>
                 )}
               </span>
-              {inBuild && state.buildTimeLeft > 0 && (
-                <span style={{
-                  fontFamily: 'monospace', fontWeight: 800, fontSize: 12,
-                  color: state.buildTimeLeft <= 3 ? '#ff4444' : '#aaffaa',
-                  minWidth: 20,
-                }}>
-                  {Math.ceil(state.buildTimeLeft)}s
-                </span>
-              )}
             </div>
           </div>
 
@@ -353,18 +344,18 @@ export function HUD() {
             )}
             {inWave && !state.isPaused && (
               <button
-                onPointerDown={() => setSpeed(state.speed === 2 ? 1 : 2)}
+                onPointerDown={() => setSpeed(state.speed >= 4 ? 1 : state.speed >= 2 ? 4 : 2)}
                 style={{
-                  background: state.speed === 2 ? 'rgba(220,80,0,0.85)' : 'rgba(60,60,60,0.7)',
-                  border: `1px solid ${state.speed === 2 ? '#ff6600' : 'rgba(255,255,255,0.15)'}`,
-                  color: state.speed === 2 ? '#fff' : 'rgba(255,255,255,0.6)',
+                  background: state.speed >= 4 ? 'rgba(180,0,200,0.85)' : state.speed >= 2 ? 'rgba(220,80,0,0.85)' : 'rgba(60,60,60,0.7)',
+                  border: `1px solid ${state.speed >= 4 ? '#cc44ff' : state.speed >= 2 ? '#ff6600' : 'rgba(255,255,255,0.15)'}`,
+                  color: state.speed >= 2 ? '#fff' : 'rgba(255,255,255,0.6)',
                   borderRadius: 6, fontSize: 13, fontWeight: 800,
                   width: 38, height: 36, cursor: 'pointer',
                   WebkitTapHighlightColor: 'transparent',
-                  boxShadow: state.speed === 2 ? '0 0 8px rgba(255,100,0,0.5)' : 'none',
+                  boxShadow: state.speed >= 4 ? '0 0 8px rgba(180,0,220,0.5)' : state.speed >= 2 ? '0 0 8px rgba(255,100,0,0.5)' : 'none',
                 }}
               >
-                {state.speed === 2 ? '⏩' : '▶▶'}
+                {state.speed >= 4 ? '⏭' : state.speed >= 2 ? '⏩' : '▶▶'}
               </button>
             )}
             {inWave && state.canSendNextWave && (
@@ -590,112 +581,39 @@ export function HUD() {
             </div>
 
             {/* Action buttons */}
-            {lvl === 0 && (upgradeTowerData as any).branch === null ? (
-              /* ── Branch choice: first upgrade ── */
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{
-                  color: 'rgba(255,230,120,0.9)', fontSize: 11, fontWeight: 700,
-                  textAlign: 'center', padding: '4px 8px',
-                  background: 'rgba(255,200,0,0.08)', borderRadius: 6,
-                  border: '1px solid rgba(255,200,0,0.15)',
-                }}>
-                  ✦ שדרוג ראשון — בחר כיוון (${ upgCost})
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button
-                    disabled={!canUpg}
-                    onPointerDown={() => { if (canUpg) upgradeTowerBranch(upgradeTowerData.id, 'dmg'); }}
-                    style={{
-                      flex: 1, padding: '12px 6px', borderRadius: 10,
-                      border: `2px solid ${canUpg ? '#ff7755' : 'rgba(255,255,255,0.08)'}`,
-                      background: canUpg ? 'linear-gradient(160deg,rgba(200,70,30,0.55),rgba(140,40,20,0.45))' : 'rgba(255,255,255,0.03)',
-                      color: canUpg ? '#ffcc99' : 'rgba(255,255,255,0.2)',
-                      fontSize: 12, fontWeight: 800, cursor: canUpg ? 'pointer' : 'not-allowed',
-                      WebkitTapHighlightColor: 'transparent', lineHeight: 1.5, textAlign: 'center',
-                      boxShadow: canUpg ? '0 0 14px rgba(255,80,30,0.3)' : 'none',
-                    }}
-                  >
-                    💥 מתקפה<br/>
-                    <span style={{ fontSize: 9, opacity: 0.8 }}>נזק ×2.5 • קצב ×1.2</span>
-                  </button>
-                  <button
-                    disabled={!canUpg}
-                    onPointerDown={() => { if (canUpg) upgradeTowerBranch(upgradeTowerData.id, 'util'); }}
-                    style={{
-                      flex: 1, padding: '12px 6px', borderRadius: 10,
-                      border: `2px solid ${canUpg ? '#55aaff' : 'rgba(255,255,255,0.08)'}`,
-                      background: canUpg ? 'linear-gradient(160deg,rgba(30,80,200,0.55),rgba(20,50,140,0.45))' : 'rgba(255,255,255,0.03)',
-                      color: canUpg ? '#99ccff' : 'rgba(255,255,255,0.2)',
-                      fontSize: 12, fontWeight: 800, cursor: canUpg ? 'pointer' : 'not-allowed',
-                      WebkitTapHighlightColor: 'transparent', lineHeight: 1.5, textAlign: 'center',
-                      boxShadow: canUpg ? '0 0 14px rgba(60,120,255,0.3)' : 'none',
-                    }}
-                  >
-                    🛡 תמיכה<br/>
-                    <span style={{ fontSize: 9, opacity: 0.8 }}>טווח ×1.6 • קצב ×1.7</span>
-                  </button>
-                </div>
-                <button
-                  onPointerDown={() => sellTower(upgradeTowerData.id)}
-                  style={{
-                    padding: '7px 0', borderRadius: 9,
-                    border: '1px solid rgba(220,80,80,0.3)',
-                    background: 'rgba(160,30,30,0.15)',
-                    color: '#ff9999', fontSize: 11, fontWeight: 700,
-                    cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
-                  }}
-                >
-                  🗑 מכור +${sellAmt}
-                </button>
-              </div>
-            ) : (
-              /* ── Regular upgrade ── */
-              <div style={{ display: 'flex', gap: 8 }}>
-                {(upgradeTowerData as any).branch && (
-                  <div style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    width: 32, borderRadius: 8, flexShrink: 0,
-                    border: `1px solid ${(upgradeTowerData as any).branch === 'dmg' ? '#ff775544' : '#55aaff44'}`,
-                    background: (upgradeTowerData as any).branch === 'dmg' ? 'rgba(180,60,30,0.3)' : 'rgba(30,80,180,0.3)',
-                    color: (upgradeTowerData as any).branch === 'dmg' ? '#ffcc99' : '#99ccff',
-                    fontSize: 14,
-                  }}>
-                    {(upgradeTowerData as any).branch === 'dmg' ? '💥' : '🛡'}
-                  </div>
-                )}
-                <button
-                  disabled={!canUpg}
-                  onPointerDown={() => { if (canUpg) upgradeTower(upgradeTowerData.id); }}
-                  style={{
-                    flex: 2, padding: '11px 0', borderRadius: 11,
-                    border: `2px solid ${canUpg ? '#ffd700' : 'rgba(255,255,255,0.08)'}`,
-                    background: canUpg
-                      ? 'linear-gradient(135deg, rgba(200,150,0,0.55), rgba(140,90,0,0.55))'
-                      : 'rgba(255,255,255,0.03)',
-                    color: canUpg ? '#ffd700' : 'rgba(255,255,255,0.2)',
-                    fontSize: 13, fontWeight: 800,
-                    cursor: canUpg ? 'pointer' : 'not-allowed',
-                    WebkitTapHighlightColor: 'transparent',
-                    boxShadow: canUpg ? '0 0 20px rgba(255,200,0,0.25)' : 'none',
-                  }}
-                >
-                  {canUpg ? `⬆ שדרג  $${upgCost}` : `צריך $${upgCost}`}
-                </button>
-                <button
-                  onPointerDown={() => sellTower(upgradeTowerData.id)}
-                  style={{
-                    flex: 1, padding: '11px 0', borderRadius: 11,
-                    border: '1.5px solid rgba(220,80,80,0.35)',
-                    background: 'rgba(180,40,40,0.18)',
-                    color: '#ff8888', fontSize: 12, fontWeight: 700,
-                    cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
-                  }}
-                >
-                  🗑 מכור<br/>
-                  <span style={{ fontSize: 11, color: '#ffaaaa', fontWeight: 600 }}>+${sellAmt}</span>
-                </button>
-              </div>
-            )}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                disabled={!canUpg}
+                onPointerDown={() => { if (canUpg) upgradeTower(upgradeTowerData.id); }}
+                style={{
+                  flex: 2, padding: '11px 0', borderRadius: 11,
+                  border: `2px solid ${canUpg ? '#ffd700' : 'rgba(255,255,255,0.08)'}`,
+                  background: canUpg
+                    ? 'linear-gradient(135deg, rgba(200,150,0,0.55), rgba(140,90,0,0.55))'
+                    : 'rgba(255,255,255,0.03)',
+                  color: canUpg ? '#ffd700' : 'rgba(255,255,255,0.2)',
+                  fontSize: 13, fontWeight: 800,
+                  cursor: canUpg ? 'pointer' : 'not-allowed',
+                  WebkitTapHighlightColor: 'transparent',
+                  boxShadow: canUpg ? '0 0 20px rgba(255,200,0,0.25)' : 'none',
+                }}
+              >
+                {canUpg ? `⬆ שדרג  $${upgCost}` : `צריך $${upgCost}`}
+              </button>
+              <button
+                onPointerDown={() => sellTower(upgradeTowerData.id)}
+                style={{
+                  flex: 1, padding: '11px 0', borderRadius: 11,
+                  border: '1.5px solid rgba(220,80,80,0.35)',
+                  background: 'rgba(180,40,40,0.18)',
+                  color: '#ff8888', fontSize: 12, fontWeight: 700,
+                  cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
+                }}
+              >
+                🗑 מכור<br/>
+                <span style={{ fontSize: 11, color: '#ffaaaa', fontWeight: 600 }}>+${sellAmt}</span>
+              </button>
+            </div>
           </div>
         );
       })()}
